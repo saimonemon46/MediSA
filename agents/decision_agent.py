@@ -5,4 +5,4 @@ def decide_next(state):
     if not state.get("stop_flag", False):
         return "continue"
 
-    return "doctor"
+    return "low"
