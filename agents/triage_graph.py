@@ -3,6 +3,7 @@ from services.symptom_extractor import SymptomExtractor
 from services.severity_engine import SeverityEngine
 from services.question_generator import generate_followup
 from agents.decision_agent import decide_next
+from services.guidance_generator import generate_guidance
 
 extractor = SymptomExtractor()
 severity_engine = SeverityEngine()
@@ -70,23 +71,14 @@ def severity_node(state):
 
 
 def low_severity_node(state):
-    print("\nAgent: Based on the information you shared, your symptoms appear to be mild.")
+    guidance = generate_guidance(state)
+    print("\nAgent:", guidance)
 
-    print(
-        "Basic guidance:\n"
-        "- Monitor the symptom for any changes\n"
-        "- Avoid known irritants or triggers\n"
-        "- Rest and stay hydrated\n"
-        "- Seek medical help if symptoms worsen\n"
+    choice = input(
+        "\nAgent: Would you like to see a relevant doctor near you? (yes/no)\nYou: "
     )
 
-    choice = input("Agent: Would you like to see a relevant doctor near you? (yes/no)\nYou: ")
-
-    if choice.lower().startswith("y"):
-        state["want_doctor"] = True
-    else:
-        state["want_doctor"] = False
-
+    state["want_doctor"] = choice.lower().startswith("y")
     return state
 
 
