@@ -16,6 +16,8 @@ Rules you MUST follow:
 7. Do NOT repeat questions already asked.
 8. If no further clarification is needed, respond with EXACTLY:
 STOP
+9. Do NOT ask a question that is semantically similar to any previously asked question.
+
 
 Focus on identifying:
 - Duration of symptoms

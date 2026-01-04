@@ -19,14 +19,19 @@ def followup_node(state):
     if state["followup_count"] >= MAX_FOLLOWUPS:
         state["stop_flag"] = True
         return state
-
+    
     question = generate_followup(state)
 
-    # LLM says stop
     if question == "STOP":
         state["stop_flag"] = True
         return state
 
+    # Prevent duplicate questions
+    if question in state["asked_questions"]:
+        state["stop_flag"] = True
+        return state
+
+    state["asked_questions"].append(question)
     print("Agent:", question)
     user_input = input("You: ")
 
