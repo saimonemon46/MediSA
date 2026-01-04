@@ -2,8 +2,9 @@ from langgraph.graph import StateGraph
 from services.symptom_extractor import SymptomExtractor
 from services.severity_engine import SeverityEngine
 from services.question_generator import generate_followup
-from agents.decision_agent import decide_next
+from agents.decision_agent import decide_next, doctor_decision
 from services.guidance_generator import generate_guidance
+from services.doctor_service import DoctorService
 
 extractor = SymptomExtractor()
 severity_engine = SeverityEngine()
@@ -102,7 +103,34 @@ def emergency_node(state):
     return state
 
 
+def ask_location_node(state):
+    location = input("\nAgent: Please tell me your location (city/area):\nYou: ")
+    state["user_location"] = location
+    return state
 
+
+
+
+
+doctor_service = DoctorService()
+
+def doctor_lookup_node(state):
+    location = state.get("user_location", "")
+    results = doctor_service.find(location, limit=3)
+
+    if results.empty:
+        print("\nAgent: No doctors were found for the provided location.")
+        return state
+
+    print("\nAgent: Here are a few doctors near you you may consider:\n")
+
+    for _, row in results.iterrows():
+        print(f"- Doctor Name: {row['Doctor Name']}")
+        print(f"  Speciality: {row['Speciality']}")
+        print(f"  Experience: {row['Experience']} years")
+        print(f"  Chamber: {row['Chamber']}\n")
+
+    return state
 
 def end_node(state):
     return state
@@ -114,6 +142,8 @@ graph.add_node("followup", followup_node)
 graph.add_node("severity", severity_node)
 graph.add_node("low", low_severity_node)
 graph.add_node("emergency", emergency_node)
+graph.add_node("ask_location", ask_location_node)
+graph.add_node("doctor_lookup", doctor_lookup_node)
 graph.add_node("end", end_node)
 
 
@@ -135,7 +165,17 @@ graph.add_conditional_edges(
     }
 )
 
-graph.add_edge("low", "end")
+graph.add_conditional_edges(
+    "low",
+    doctor_decision,
+    {
+        "ask_location": "ask_location",
+        "end": "end"
+    }
+)
+graph.add_edge("ask_location", "doctor_lookup")
+graph.add_edge("doctor_lookup", "end")
+
 graph.add_edge("emergency", "end")
 
 app = graph.compile()

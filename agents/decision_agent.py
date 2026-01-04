@@ -6,3 +6,9 @@ def decide_next(state):
         return "continue"
 
     return "low"
+
+
+
+
+def doctor_decision(state):
+    return "ask_location" if state.get("want_doctor") else "end"
