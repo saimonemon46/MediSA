@@ -8,6 +8,9 @@ from services.doctor_service import DoctorService
 from services.confidence_engine import ConfidenceEngine
 from utils.triage_reasoning import generate_triage_reasoning
 from utils.confidence_bucket import confidence_bucket
+from utils.followup_policy import next_missing_coverage
+from utils.coverage_updater import update_info_coverage
+
 
 
 
@@ -51,119 +54,71 @@ def opening_node(state):
 def followup_node(state):
     state["followup_count"] += 1
 
-    # Safety cap
+    # --------------------------------------------------
+    # 1. Safety cap (hard stop)
+    # --------------------------------------------------
     if state["followup_count"] >= MAX_FOLLOWUPS:
         state["stop_flag"] = True
         return state
 
-    question = generate_followup(state)
+    # --------------------------------------------------
+    # 2. SYSTEM decides what is missing
+    # --------------------------------------------------
+    intent = next_missing_coverage(state["info_coverage"])
 
-    if question == "STOP":
+    if intent is None:
+        # All required information collected
         state["stop_flag"] = True
         return state
 
+    state["current_intent"] = intent
+
+    # --------------------------------------------------
+    # 3. LLM ONLY phrases the question
+    # --------------------------------------------------
+    question = generate_followup(intent, state)
+
+    # LLM should never control flow, but we guard anyway
+    if question.strip() == "STOP":
+        state["stop_flag"] = True
+        return state
+
+    # Absolute duplicate protection (last line of defense)
     if question in state["asked_questions"]:
         state["stop_flag"] = True
         return state
 
     state["asked_questions"].append(question)
     print("Agent:", question)
-    user_input = input("You: ")
 
+    # --------------------------------------------------
+    # 4. User response
+    # --------------------------------------------------
+    user_input = input("You: ")
     state["conversation_history"].append(user_input)
 
-    # Extract symptoms
+    # --------------------------------------------------
+    # 5. Update symptoms + coverage
+    # --------------------------------------------------
     new_symptoms = extractor.extract(user_input)
     state["collected_symptoms"].extend(new_symptoms)
 
-    # ------------------------------------------------------------------
-    # ✅ Update info coverage (transparent, defensible heuristics)
-    # ------------------------------------------------------------------
-    DURATION_KEYWORDS = [
-        # minutes / hours
-        "minute", "minutes", "min", "hour", "hours", "hr",
+    update_info_coverage(state, user_input)
 
-        # general time references
-        "day", "days", "week", "weeks", "month", "months", "year", "years",
-
-        # relative timing
-        "ago", "since", "for", "started", "began",
-
-        # common phrases
-        "half an hour", "few hours", "couple of hours",
-        "this morning", "today", "yesterday", "last night"
-    ]
-    PROGRESSION_KEYWORDS = [
-        # change indicators
-        "change", "changed", "different",
-
-        # worsening / improvement
-        "worse", "worsening", "better", "improving",
-
-        # intensity / size
-        "increasing", "decreasing", "stronger", "weaker",
-        "bigger", "larger", "smaller", "spread", "spreading",
-
-        # appearance
-        "darker", "lighter", "color", "colour",
-        "redder", "swollen", "inflamed",
-
-        # stability
-        "same", "unchanged", "no change"
-    ]
-    SEVERITY_KEYWORDS = [
-        # qualitative
-        "mild", "moderate", "severe", "intense", "bad",
-
-        # numeric / scale
-        "scale", "out of", "/10", "rating", "rate",
-
-        # impact
-        "pain", "hurt", "hurting", "burning", "throbbing",
-        "unbearable", "tolerable"
-    ]
-    RED_FLAG_KEYWORDS = [
-        # breathing / circulation
-        "shortness of breath", "breathing problem", "difficulty breathing",
-        "chest pain", "tightness in chest",
-
-        # neurological
-        "faint", "fainted", "fainting", "unconscious",
-        "confusion", "seizure", "fits", "collapse",
-
-        # bleeding
-        "bleeding", "vomiting blood", "blood in vomit",
-
-        # swelling / allergic reactions
-        "swelling", "swollen lips", "swollen tongue",
-        "throat closing",
-
-        # severe systemic signs
-        "high fever", "very weak", "cannot stand"
-    ]
-    text = user_input.lower()
-
-    if any(k in text for k in DURATION_KEYWORDS):
-        state["info_coverage"]["duration"] = True
-
-    if any(k in text for k in PROGRESSION_KEYWORDS):
-        state["info_coverage"]["progression"] = True
-
-    if any(k in text for k in SEVERITY_KEYWORDS):
-        state["info_coverage"]["severity"] = True
-
-    if any(k in text for k in RED_FLAG_KEYWORDS):
-        state["info_coverage"]["red_flags"] = True
-
+    state["stop_flag"] = False
+    return state
+    
 
 def should_continue(state):
-    # Stop when coverage is complete
-    if all(state["info_coverage"].values()):
+    """
+    Decide whether to continue follow-ups or move to severity decision.
+    """
+
+    # If nothing important is missing, stop questioning
+    if next_missing_coverage(state["info_coverage"]) is None:
         return "decide"
 
-    if state.get("stop_flag"):
-        return "decide"
-
+    # Otherwise, keep asking follow-ups
     return "followup"
 
 
