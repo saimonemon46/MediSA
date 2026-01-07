@@ -6,6 +6,8 @@ from agents.decision_agent import decide_next, doctor_decision
 from services.guidance_generator import generate_guidance
 from services.doctor_service import DoctorService
 from services.confidence_engine import ConfidenceEngine
+from utils.triage_reasoning import generate_triage_reasoning
+
 
 # ------------------------------------------------------------------
 # Setup
@@ -176,29 +178,35 @@ def severity_node(state):
 
 def low_severity_node(state):
     # --------------------------------------------------
-    # 1. Print triage summary FIRST
+    # 1. Triage reasoning (NEW)
+    # --------------------------------------------------
+    reasoning = generate_triage_reasoning(state)
+
+    print("\nTriage reasoning:")
+    for r in reasoning:
+        print(f"- {r}")
+
+    # --------------------------------------------------
+    # 2. Triage summary
     # --------------------------------------------------
     print("\nTriage summary:")
     for k, v in state["info_coverage"].items():
         print(f"- {k}: {'✓' if v else '✗'}")
 
     # --------------------------------------------------
-    # 2. Print confidence score
+    # 3. Confidence score
     # --------------------------------------------------
     if state.get("confidence_score") is not None:
         print(f"\nTriage confidence score: {state['confidence_score']}")
         print("(Reflects information completeness and internal consistency, not a diagnosis.)")
 
     # --------------------------------------------------
-    # 3. THEN provide guidance
+    # 4. Guidance (optional, non-diagnostic)
     # --------------------------------------------------
     guidance = generate_guidance(state)
     print("\nAgent: Here is some general guidance based on what you shared:\n")
     print(guidance)
 
-    # --------------------------------------------------
-    # 4. Doctor lookup option
-    # --------------------------------------------------
     choice = input(
         "\nAgent: Would you like to see a relevant doctor near you? (yes/no)\nYou: "
     )
@@ -207,23 +215,41 @@ def low_severity_node(state):
     return state
 
 
-
 def emergency_node(state):
+    # --------------------------------------------------
+    # 1. TRIAGE REASONING (NEW)
+    # --------------------------------------------------
+    print("\nTriage reasoning:")
+    for r in generate_triage_reasoning(state):
+        print(f"- {r}")
+
+    # --------------------------------------------------
+    # 2. EMERGENCY WARNING
+    # --------------------------------------------------
     print(
         "\nAgent: ⚠️ Your symptoms may indicate a serious condition.\n"
         "This could require immediate medical attention."
     )
 
+    # --------------------------------------------------
+    # 3. TRIAGE SUMMARY
+    # --------------------------------------------------
     print("\nTriage summary:")
     for k, v in state["info_coverage"].items():
         print(f"- {k}: {'✓' if v else '✗'}")
 
+    # --------------------------------------------------
+    # 4. CONFIDENCE SCORE
+    # --------------------------------------------------
     if state.get("confidence_score") is not None:
         print(
             f"\nTriage confidence score: {state['confidence_score']}\n"
-            "(Reflects consistency and coverage.)"
+            "(Reflects information completeness and internal consistency, not a diagnosis.)"
         )
 
+    # --------------------------------------------------
+    # 5. USER ACTION
+    # --------------------------------------------------
     choice = input(
         "Agent: Do you want to contact emergency services now? (yes/no)\nYou: "
     )
@@ -234,6 +260,7 @@ def emergency_node(state):
         print("\nAgent: Please seek medical care as soon as possible.")
 
     return state
+
 
 
 def ask_location_node(state):
