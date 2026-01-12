@@ -8,8 +8,11 @@ from services.doctor_service import DoctorService
 from services.confidence_engine import ConfidenceEngine
 from utils.triage_reasoning import generate_triage_reasoning
 from utils.confidence_bucket import confidence_bucket
-from utils.followup_policy import next_missing_coverage
+
 from utils.coverage_updater import update_info_coverage
+from services.info_state_updater import update_info_state
+from utils.followup_policy import next_missing_dimension
+
 
 
 
@@ -41,12 +44,15 @@ def opening_node(state):
     state["stop_flag"] = False
 
     # ✅ Explicit information coverage
-    state["info_coverage"] = {
-        "duration": False,
-        "progression": False,
-        "severity": False,
-        "red_flags": False
+    state["info_state"] = {
+        "onset": None,
+        "duration": None,
+        "progression": None,
+        "sensation": None,
+        "context": None,
+        "associated_discomfort": None
     }
+
 
     return state
 
@@ -64,19 +70,21 @@ def followup_node(state):
     # --------------------------------------------------
     # 2. SYSTEM decides what is missing
     # --------------------------------------------------
-    intent = next_missing_coverage(state["info_coverage"])
+    update_info_state(state)
 
-    if intent is None:
-        # All required information collected
+    dimension = next_missing_dimension(state["info_state"])
+    if dimension is None:
         state["stop_flag"] = True
         return state
 
-    state["current_intent"] = intent
+    state["current_dimension"] = dimension
+
+    question = generate_followup(dimension, state)
 
     # --------------------------------------------------
     # 3. LLM ONLY phrases the question
     # --------------------------------------------------
-    question = generate_followup(intent, state)
+    question = generate_followup(dimension, state)
 
     # LLM should never control flow, but we guard anyway
     if question.strip() == "STOP":
@@ -109,17 +117,18 @@ def followup_node(state):
     return state
     
 
+from utils.followup_policy import next_missing_dimension
+
 def should_continue(state):
     """
     Decide whether to continue follow-ups or move to severity decision.
     """
 
-    # If nothing important is missing, stop questioning
-    if next_missing_coverage(state["info_coverage"]) is None:
+    if next_missing_dimension(state["info_state"]) is None:
         return "decide"
 
-    # Otherwise, keep asking follow-ups
     return "followup"
+
 
 
 def severity_node(state):
