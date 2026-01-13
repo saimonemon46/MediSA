@@ -243,13 +243,42 @@ def ask_location_node(state):
     return state
 
 
+from services.disease_specialist_mapper import DiseaseSpecialistMapper
+
+_mapper = DiseaseSpecialistMapper()
+
 def doctor_lookup_node(state):
     location = state.get("user_location", "")
-    results = doctor_service.find(location, limit=3)
+    symptoms = state.get("collected_symptoms", [])
+
+    if not location:
+        print("\nAgent: Location was not provided.")
+        return state
+
+    # 🔑 THIS IS THE POINT OF THE FILE
+    specialist = _mapper.infer_specialist(symptoms)
+
+    results = doctor_service.find(
+        location=location,
+        specialty=specialist,
+        limit=3
+    )
 
     if results.empty:
-        print("\nAgent: No doctors were found for the provided location.")
-        return state
+        print(
+            f"\nAgent: No {specialist} doctors found in {location}. "
+            "Showing general medicine doctors instead.\n"
+        )
+
+        results = doctor_service.find(
+            location=location,
+            specialty="Medicine",
+            limit=3
+        )
+
+        if results.empty:
+            print("\nAgent: No doctors were found for the provided location.")
+            return state
 
     print("\nAgent: Doctors you may consider:\n")
 
@@ -260,6 +289,7 @@ def doctor_lookup_node(state):
         print(f"  Chamber: {row['Chamber']}\n")
 
     return state
+
 
 
 def end_node(state):
