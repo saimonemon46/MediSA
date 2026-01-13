@@ -1,11 +1,7 @@
 def update_info_coverage(state: dict, user_input: str) -> None:
-    """
-    Update info_coverage flags based on the user's latest response.
-    Uses transparent keyword heuristics (no ML, no LLM).
-    """
-
     text = user_input.lower()
     coverage = state.get("info_coverage", {})
+    info_state = state.get("info_state", {})
 
     # -------------------------
     # Duration
@@ -15,64 +11,62 @@ def update_info_coverage(state: dict, user_input: str) -> None:
         "hour", "hours", "hr",
         "day", "days", "week", "weeks",
         "month", "months", "year", "years",
-        "half", "ago", "since", "for",
-        "today", "yesterday", "last night",
-        "started", "began"
+        "ago", "since", "for"
     ]):
         coverage["duration"] = True
+        info_state["duration"] = True   # 🔒 LOCK IT
 
     # -------------------------
-    # Progression / change
+    # Progression
     # -------------------------
     if any(k in text for k in [
-        "change", "changed", "different",
-        "worse", "worsening", "better", "improving",
-        "same", "unchanged",
-        "increasing", "decreasing",
-        "spread", "spreading",
-        "bigger", "larger", "smaller",
-        "darker", "lighter", "color", "colour",
-        "redder", "swollen", "inflamed"
+        "change", "changed", "worse", "better",
+        "same", "spreading", "darker", "lighter",
+        "swollen", "inflamed"
     ]):
         coverage["progression"] = True
+        info_state["progression"] = True  # 🔒 LOCK IT
 
     # -------------------------
-    # Severity / intensity
+    # Sensation
     # -------------------------
     if any(k in text for k in [
-        "mild", "moderate", "severe",
-        "intense", "bad",
-        "pain", "hurting", "hurt",
-        "burning", "throbbing",
-        "scale", "out of", "/10", "rating", "rate"
+        "itch", "itching", "pain", "burning",
+        "hurting", "throbbing"
     ]):
-        coverage["severity"] = True
+        coverage["sensation"] = True
+        info_state["sensation"] = True  # 🔒 LOCK IT
 
     # -------------------------
-    # Red flags (presence, not screening)
+    # Context (trigger/exposure)
+    # -------------------------
+    if any(k in text for k in [
+        "soap", "cream", "medicine", "food",
+        "after", "before", "used"
+    ]):
+        coverage["context"] = True
+        info_state["context"] = True  # 🔒 LOCK IT
+
+    # -------------------------
+    # Associated discomfort
+    # -------------------------
+    if any(k in text for k in [
+        "fever", "nausea", "dizziness",
+        "swelling", "itching"
+    ]):
+        coverage["associated_discomfort"] = True
+        info_state["associated_discomfort"] = True  # 🔒 LOCK IT
+
+    # -------------------------
+    # Red flags (unchanged)
     # -------------------------
     if not any(neg in text for neg in ["no ", "not ", "never "]):
         if any(k in text for k in [
-            "shortness of breath", "difficulty breathing", "breathing problem",
-            "chest pain", "tightness in chest",
-            "faint", "fainted", "fainting",
-            "unconscious", "collapse",
-            "confusion", "seizure", "fits",
-            "bleeding", "vomiting blood",
-            "swelling", "swollen lips", "swollen tongue",
-            "throat closing"
+            "shortness of breath", "difficulty breathing",
+            "chest pain", "fainting",
+            "unconscious", "bleeding"
         ]):
             coverage["red_flags"] = True
 
-    # -------------------------
-    # Associated symptoms
-    # -------------------------
-    if any(k in text for k in [
-        "also", "along with", "besides",
-        "weak", "weakness", "nausea",
-        "dizziness", "fever", "chills",
-        "itching", "rash", "vomiting"
-    ]):
-        coverage["associated_symptoms"] = True
-
     state["info_coverage"] = coverage
+    state["info_state"] = info_state

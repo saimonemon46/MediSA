@@ -78,13 +78,11 @@ def followup_node(state):
         return state
 
     state["current_dimension"] = dimension
+    state["info_state"][dimension] = True  # 🔒 PRE-LOCK DIMENSION
+
 
     question = generate_followup(dimension, state)
 
-    # --------------------------------------------------
-    # 3. LLM ONLY phrases the question
-    # --------------------------------------------------
-    question = generate_followup(dimension, state)
 
     # LLM should never control flow, but we guard anyway
     if question.strip() == "STOP":
