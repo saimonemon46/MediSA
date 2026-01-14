@@ -56,12 +56,12 @@ if st.session_state.session_id is None:
 # ==================================================
 
 for speaker, message in st.session_state.chat:
-    if speaker == "Agent":
-        st.markdown("**Agent:**")
+    if speaker == "Agent" and message.strip():
+        # st.markdown("**Agent:**")
         for line in message.split("\n"):
             if line.strip():
                 st.markdown(line)
-    else:
+    elif speaker == "You":
         st.markdown(f"**You:** {message}")
 
 # ==================================================

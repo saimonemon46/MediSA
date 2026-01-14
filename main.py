@@ -12,10 +12,11 @@ from agents.triage_graph import app
 
 api = FastAPI()
 
+# In-memory session store
 SESSIONS = {}
 
 # ==================================================
-# Capture stdout
+# Capture stdout from graph execution
 # ==================================================
 
 def run_graph_with_capture(state: dict):
@@ -28,7 +29,9 @@ def run_graph_with_capture(state: dict):
     finally:
         sys.stdout = old_stdout
 
-    return new_state, buffer.getvalue().strip()
+    output = buffer.getvalue().strip()
+    return new_state, output if output else None
+
 
 # ==================================================
 # Models
@@ -36,15 +39,18 @@ def run_graph_with_capture(state: dict):
 
 class StartResponse(BaseModel):
     session_id: str
-    agent_message: str
+    agent_message: str | None
+
 
 class UserInput(BaseModel):
     session_id: str
     message: str
 
+
 class AgentResponse(BaseModel):
-    agent_message: str
+    agent_message: str | None
     done: bool
+
 
 # ==================================================
 # Endpoints
@@ -54,9 +60,7 @@ class AgentResponse(BaseModel):
 def start_session():
     session_id = str(uuid.uuid4())
 
-    # no dummy input needed anymore
     state = {}
-
     new_state, output = run_graph_with_capture(state)
     SESSIONS[session_id] = new_state
 
@@ -64,6 +68,7 @@ def start_session():
         session_id=session_id,
         agent_message=output
     )
+
 
 @api.post("/continue", response_model=AgentResponse)
 def continue_session(data: UserInput):
@@ -74,12 +79,17 @@ def continue_session(data: UserInput):
         )
 
     state = SESSIONS[data.session_id]
+
+    # Inject user input
     state["__user_input__"] = data.message
 
     new_state, output = run_graph_with_capture(state)
     SESSIONS[data.session_id] = new_state
 
+    # Conversation is done ONLY when graph reaches terminal state
+    is_done = new_state.get("stage") == "end"
+
     return AgentResponse(
         agent_message=output,
-        done=bool(new_state.get("stop_flag", False))
+        done=is_done
     )
