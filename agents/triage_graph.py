@@ -413,30 +413,41 @@ def followup_node(state):
     if state.get("stop_flag"):
         return state
 
-    # If user just answered, process input
+    # 1️⃣ If user just answered, process input
     if "__user_input__" in state:
         user_input = consume_input(state)
         state["conversation_history"].append(user_input)
         state["collected_symptoms"].extend(extractor.extract(user_input))
         update_info_coverage(state, user_input)
-        state["awaiting_input"] = False  # ✅ allow next question
+        
+            # ✅ MARK THE DIMENSION AS ANSWERED
+        if state.get("current_dimension"):
+            state["info_state"][state["current_dimension"]] = True
 
-    # 🚨 If waiting for user input, DO NOT ask another question
+        state["awaiting_input"] = False  # allow progression
+
+        # 🔴 CRITICAL FIX:
+        # If all info is collected, STOP QA immediately
+        if next_missing_dimension(state["info_state"]) is None:
+            state["stop_flag"] = True
+            return state
+
+    # 2️⃣ If waiting for user input, do nothing
     if state.get("awaiting_input"):
         return state
 
-    # Stop if too many followups
+    # 3️⃣ Safety: max followups
     if state["followup_count"] >= MAX_FOLLOWUPS:
         state["stop_flag"] = True
         return state
 
-    # Find next missing dimension
+    # 4️⃣ Find next missing dimension
     dimension = next_missing_dimension(state["info_state"])
     if dimension is None:
         state["stop_flag"] = True
         return state
 
-    # Ask ONE question
+    # 5️⃣ Ask ONE question
     state["followup_count"] += 1
     state["current_dimension"] = dimension
     state["info_state"][dimension] = True
@@ -454,8 +465,10 @@ def followup_node(state):
     state["asked_questions"].append(question)
     print("Agent:", question)
 
-    state["awaiting_input"] = True  # 🚨 hard pause
+    # 6️⃣ Hard pause until next user response
+    state["awaiting_input"] = True
     return state
+
 
 
 # ==================================================

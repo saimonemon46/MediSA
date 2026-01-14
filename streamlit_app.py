@@ -92,9 +92,11 @@ if st.session_state.session_id and not st.session_state.done:
 
             if res.ok:
                 data = res.json()
-                msg = data.get("agent_message", "").strip()
-                if msg:
-                    st.session_state.chat.append(("Agent", msg))
+            msg = data.get("agent_message")
+
+            if msg:
+                st.session_state.chat.append(("Agent", msg))
+
 
                 st.session_state.done = data.get("done", False)
             else:
