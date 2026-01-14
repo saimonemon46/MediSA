@@ -287,6 +287,9 @@
 
 
 
+# ==================================================
+# Imports
+# ==================================================
 
 # ==================================================
 # Imports
@@ -325,34 +328,18 @@ MAX_FOLLOWUPS = 12
 
 
 # ==================================================
-# Helper: consume user input safely
+# State helpers
 # ==================================================
 
-def _consume_user_input(state):
-    user_input = state.get("user_input")
-    state["user_input"] = None
-    return user_input
+def ensure_initialized(state):
+    if state.get("_initialized"):
+        return
 
-
-# ==================================================
-# Nodes
-# ==================================================
-
-def opening_node(state):
-    user_input = _consume_user_input(state)
-
-    if not user_input:
-        state["awaiting_input"] = True
-        state["agent_message"] = "What symptom are you currently experiencing?"
-        return state
-
-    state["conversation_history"] = [user_input]
-    state["collected_symptoms"] = extractor.extract(user_input)
-
+    state["conversation_history"] = []
+    state["collected_symptoms"] = []
     state["asked_questions"] = []
     state["followup_count"] = 0
     state["stop_flag"] = False
-    state["awaiting_input"] = False
 
     state["info_state"] = {
         "onset": None,
@@ -363,63 +350,138 @@ def opening_node(state):
         "associated_discomfort": None,
     }
 
+    state["info_coverage"] = {
+        "onset": False,
+        "duration": False,
+        "progression": False,
+        "sensation": False,
+        "context": False,
+        "associated_discomfort": False,
+    }
+
+    # 🔴 NEW (critical)
+    state["stage"] = "opening"
+    state["awaiting_input"] = False
+
+
+    state["_initialized"] = True
+
+
+
+def consume_input(state):
+    if "__user_input__" not in state:
+        return None
+
+    state["awaiting_input"] = False
+    return state.pop("__user_input__")
+
+
+
+
+# ==================================================
+# Nodes
+# ==================================================
+
+def opening_node(state):
+    ensure_initialized(state)
+
+    # If opening already completed, skip entirely
+    if state["stage"] != "opening":
+        return state
+
+    # Only ask when there is no user input yet
+    if "__user_input__" not in state:
+        print("Agent: What symptom are you currently experiencing?")
+        return state
+
+    # Consume user input
+    user_input = consume_input(state)
+
+    state["conversation_history"].append(user_input)
+    state["collected_symptoms"].extend(extractor.extract(user_input))
+
+    # Mark opening complete
+    state["stage"] = "followup"
+
     return state
 
 
-# --------------------------------------------------
 
 def followup_node(state):
-    state["followup_count"] += 1
+    ensure_initialized(state)
 
+    if state.get("stop_flag"):
+        return state
+
+    # If user just answered, process input
+    if "__user_input__" in state:
+        user_input = consume_input(state)
+        state["conversation_history"].append(user_input)
+        state["collected_symptoms"].extend(extractor.extract(user_input))
+        update_info_coverage(state, user_input)
+        state["awaiting_input"] = False  # ✅ allow next question
+
+    # 🚨 If waiting for user input, DO NOT ask another question
+    if state.get("awaiting_input"):
+        return state
+
+    # Stop if too many followups
     if state["followup_count"] >= MAX_FOLLOWUPS:
         state["stop_flag"] = True
         return state
 
-    update_info_state(state)
-
+    # Find next missing dimension
     dimension = next_missing_dimension(state["info_state"])
     if dimension is None:
         state["stop_flag"] = True
         return state
 
-    user_input = _consume_user_input(state)
+    # Ask ONE question
+    state["followup_count"] += 1
+    state["current_dimension"] = dimension
+    state["info_state"][dimension] = True
 
-    if not user_input:
-        state["current_dimension"] = dimension
-        state["info_state"][dimension] = True
+    question = generate_followup(dimension, state)
 
-        question = generate_followup(dimension, state)
-        if question.strip() == "STOP":
-            state["stop_flag"] = True
-            return state
-
-        if question not in state["asked_questions"]:
-            state["asked_questions"].append(question)
-
-        state["awaiting_input"] = True
-        state["agent_message"] = question
+    if question.strip() == "STOP":
+        state["stop_flag"] = True
         return state
 
-    state["conversation_history"].append(user_input)
-    state["collected_symptoms"].extend(extractor.extract(user_input))
-    update_info_coverage(state, user_input)
+    if question in state["asked_questions"]:
+        state["stop_flag"] = True
+        return state
 
-    state["awaiting_input"] = False
-    state["stop_flag"] = False
+    state["asked_questions"].append(question)
+    print("Agent:", question)
+
+    state["awaiting_input"] = True  # 🚨 hard pause
     return state
 
 
-# --------------------------------------------------
+# ==================================================
+# Routing
+# ==================================================
 
 def should_continue(state):
+    # Stop only if waiting for input AND no new input is present
+    if state.get("awaiting_input") and "__user_input__" not in state:
+        return "end"
+
+    if state.get("stop_flag"):
+        return "end"
+
     if next_missing_dimension(state["info_state"]) is None:
         return "decide"
+
     return "followup"
 
 
-# --------------------------------------------------
+
 
 def severity_node(state):
+    if state.get("stop_flag"):
+        return state
+
     score, level = severity_engine.calculate(state["collected_symptoms"])
 
     state["severity_score"] = score
@@ -429,78 +491,77 @@ def severity_node(state):
     return state
 
 
-# --------------------------------------------------
+# ==================================================
+# Outcome nodes
+# ==================================================
 
 def low_severity_node(state):
-    reasoning = generate_triage_reasoning(state)
-    summary = {
-        k: bool(v) for k, v in state.get("info_coverage", {}).items()
-    }
-
-    bucket = None
-    if state.get("confidence_score") is not None:
-        bucket = confidence_bucket(state["confidence_score"])
-
-    state["agent_payload"] = {
-        "type": "low_severity",
-        "reasoning": reasoning,
-        "summary": summary,
-        "confidence": state.get("confidence_score"),
-        "confidence_bucket": bucket,
-        "guidance": generate_guidance(state),
-    }
-
-    user_input = _consume_user_input(state)
-
-    if not user_input:
-        state["awaiting_input"] = True
-        state["agent_message"] = "Would you like to see a relevant doctor near you? (yes/no)"
+    if state.get("stop_flag"):
         return state
 
-    state["want_doctor"] = user_input.lower().startswith("y")
-    state["awaiting_input"] = False
+    print("\nTriage reasoning:")
+    for r in generate_triage_reasoning(state):
+        print(f"- {r}")
+
+    print("\nTriage summary:")
+    for k, v in state["info_coverage"].items():
+        print(f"- {k}: {'✓' if v else '✗'}")
+
+    score = state.get("confidence_score")
+    if score is not None:
+        bucket = confidence_bucket(score)
+        print(f"\nTriage confidence: {bucket} ({score})")
+        print("(Reflects information completeness and internal consistency, not a diagnosis.)")
+
+    print("\nAgent: Here is some general guidance based on what you shared:\n")
+    print(generate_guidance(state))
+
+    # Ask doctor question once
+    if not state.get("awaiting_input"):
+        print("\nAgent: Would you like to see a relevant doctor near you? (yes/no)")
+        state["awaiting_input"] = True
+        return state
+
+    # Consume answer on next turn
+    choice = consume_input(state)
+    if choice is None:
+        return state
+
+    state["awaiting_input"] = False   # ✅ CRITICAL FIX
+    state["want_doctor"] = choice.lower().startswith("y")
     return state
 
-
-# --------------------------------------------------
 
 def emergency_node(state):
-    state["agent_payload"] = {
-        "type": "emergency",
-        "reasoning": generate_triage_reasoning(state),
-        "summary": state.get("info_coverage", {}),
-        "confidence": state.get("confidence_score"),
-        "confidence_bucket": confidence_bucket(state["confidence_score"]),
-    }
-
-    user_input = _consume_user_input(state)
-
-    if not user_input:
-        state["awaiting_input"] = True
-        state["agent_message"] = "Do you want to contact emergency services now? (yes/no)"
+    if state.get("stop_flag"):
         return state
 
-    state["emergency_contact"] = user_input.lower().startswith("y")
-    state["awaiting_input"] = False
+    print("\nTriage reasoning:")
+    for r in generate_triage_reasoning(state):
+        print(f"- {r}")
+
+    print("Agent: ⚠️ This may require urgent care.")
+
+    choice = consume_input(state)
+    if choice is None:
+        return state
+
+    if choice.lower().startswith("y"):
+        print("Emergency number (Bangladesh): 999")
+
     return state
 
-
-# --------------------------------------------------
 
 def ask_location_node(state):
-    user_input = _consume_user_input(state)
+    print("\nAgent: Please tell me your location (city/area):")
 
-    if not user_input:
-        state["awaiting_input"] = True
-        state["agent_message"] = "Please tell me your location (city/area):"
+    location = consume_input(state)
+    if location is None:
         return state
 
-    state["user_location"] = user_input
-    state["awaiting_input"] = False
+    state["user_location"] = location
     return state
 
-
-# --------------------------------------------------
 
 def doctor_lookup_node(state):
     location = state.get("user_location", "")
@@ -508,25 +569,14 @@ def doctor_lookup_node(state):
 
     specialist = _mapper.infer_specialist(symptoms)
 
-    results = doctor_service.find(
-        location=location,
-        specialty=specialist,
-        limit=3
-    )
+    results = doctor_service.find(location, specialty=specialist, limit=3)
 
-    if results.empty:
-        results = doctor_service.find(location, specialty="Medicine", limit=3)
-
-    state["agent_payload"] = {
-        "type": "doctor_list",
-        "specialist": specialist,
-        "doctors": results.to_dict(orient="records"),
-    }
+    print("\nAgent: Doctors you may consider:\n")
+    for _, row in results.iterrows():
+        print(f"- {row['Doctor Name']} ({row['Speciality']})")
 
     return state
 
-
-# --------------------------------------------------
 
 def end_node(state):
     return state
@@ -549,12 +599,17 @@ graph.add_node("end", end_node)
 
 graph.set_entry_point("opening")
 
-graph.add_edge("opening", "followup")
+graph.add_conditional_edges(
+    "opening",
+    lambda state: "followup" if state["stage"] == "followup" else "end",
+    {"followup": "followup", "end": "end"}
+)
+
 
 graph.add_conditional_edges(
     "followup",
     should_continue,
-    {"followup": "followup", "decide": "severity"}
+    {"followup": "followup", "decide": "severity", "end": "end"}
 )
 
 graph.add_conditional_edges(
@@ -574,3 +629,229 @@ graph.add_edge("doctor_lookup", "end")
 graph.add_edge("emergency", "end")
 
 app = graph.compile()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# from langgraph.graph import StateGraph
+
+# from services.symptom_extractor import SymptomExtractor
+# from services.severity_engine import SeverityEngine
+# from services.question_generator import generate_followup
+# from services.guidance_generator import generate_guidance
+# from services.confidence_engine import ConfidenceEngine
+
+# from utils.followup_policy import next_missing_dimension
+# from utils.triage_reasoning import generate_triage_reasoning
+
+
+# # =====================
+# # Setup
+# # =====================
+
+# extractor = SymptomExtractor()
+# severity_engine = SeverityEngine()
+# confidence_engine = ConfidenceEngine()
+
+# MAX_FOLLOWUPS = 6
+
+
+# # =====================
+# # Helpers
+# # =====================
+
+# def consume_input(state):
+#     text = state.get("user_input")
+#     state["user_input"] = None
+#     return text
+
+
+# def normalize_state(state):
+#     state.setdefault("conversation_history", [])
+#     state.setdefault("collected_symptoms", [])
+#     state.setdefault("followup_count", 0)
+#     state.setdefault("awaiting_input", False)
+#     state.setdefault("info_state", {
+#         "onset": None,
+#         "duration": None,
+#         "progression": None,
+#         "sensation": None,
+#         "context": None,
+#         "associated_discomfort": None,
+#     })
+#     return state
+
+
+# # =====================
+# # Nodes
+# # =====================
+
+# def opening_node(state):
+#     state = normalize_state(state)
+
+#     if state["conversation_history"]:
+#         return state
+
+#     user_input = consume_input(state)
+
+#     if not user_input:
+#         state["agent_message"] = "What symptom are you currently experiencing?"
+#         state["awaiting_input"] = True
+#         return state
+
+#     state["conversation_history"].append(user_input)
+#     state["collected_symptoms"] = extractor.extract(user_input)
+#     state["awaiting_input"] = False
+#     return state
+
+
+# def followup_node(state):
+#     state = normalize_state(state)
+
+#     # 🚫 ABSOLUTE GUARD: no symptom → no followups
+#     if not state["collected_symptoms"]:
+#         state["agent_message"] = "Please describe your main symptom first."
+#         state["awaiting_input"] = True
+#         return state
+
+#     if state["followup_count"] >= MAX_FOLLOWUPS:
+#         return state
+
+#     dimension = next_missing_dimension(state["info_state"])
+#     if dimension is None:
+#         return state
+
+#     user_input = consume_input(state)
+
+#     # =========================
+#     # AGENT ASKS QUESTION
+#     # =========================
+#     if not user_input:
+#         symptom = state["collected_symptoms"][0]  # SAFE NOW
+
+#         question = generate_followup(dimension, state)
+
+#         # Force symptom specificity
+#         if "this symptom" in question.lower():
+#             question = question.replace("this symptom", f"the {symptom}")
+
+#         state["agent_message"] = question
+#         state["awaiting_input"] = True
+#         return state   # 🔒 HARD STOP
+
+#     # =========================
+#     # USER ANSWERED
+#     # =========================
+#     state["conversation_history"].append(user_input)
+#     state["collected_symptoms"].extend(extractor.extract(user_input))
+#     state["info_state"][dimension] = True
+
+#     state["followup_count"] += 1
+#     state["awaiting_input"] = False
+#     return state
+
+
+
+# def severity_node(state):
+#     score, level = severity_engine.calculate(state["collected_symptoms"])
+#     state["severity_level"] = level
+#     state["confidence_score"] = confidence_engine.calculate(state)
+#     return state
+
+
+# def low_severity_node(state):
+#     state["agent_payload"] = {
+#         "type": "low",
+#         "reasoning": generate_triage_reasoning(state),
+#         "confidence": state["confidence_score"],
+#         "guidance": generate_guidance(state),
+#     }
+#     return state
+
+
+# def end_node(state):
+#     return state
+
+
+# # =====================
+# # Routing
+# # =====================
+
+# def route_after_opening(state):
+#     if state.get("awaiting_input"):
+#         return "end"
+#     return "followup"
+
+
+# def route_after_followup(state):
+#     if state.get("awaiting_input"):
+#         return "end"
+
+#     if (
+#         next_missing_dimension(state["info_state"]) is None
+#         or state["followup_count"] >= MAX_FOLLOWUPS
+#     ):
+#         return "severity"
+
+#     return "followup"
+
+
+# def route_after_severity(state):
+#     return "low"
+
+
+# # =====================
+# # Graph
+# # =====================
+
+# graph = StateGraph(dict)
+
+# graph.add_node("opening", opening_node)
+# graph.add_node("followup", followup_node)
+# graph.add_node("severity", severity_node)
+# graph.add_node("low", low_severity_node)
+# graph.add_node("end", end_node)
+
+# graph.set_entry_point("opening")
+
+# graph.add_conditional_edges(
+#     "opening",
+#     route_after_opening,
+#     {"followup": "followup", "end": "end"}
+# )
+
+# graph.add_conditional_edges(
+#     "followup",
+#     route_after_followup,
+#     {"followup": "followup", "severity": "severity", "end": "end"}
+# )
+
+# graph.add_conditional_edges(
+#     "severity",
+#     route_after_severity,
+#     {"low": "low"}
+# )
+
+# graph.add_edge("low", "end")
+
+# app = graph.compile()
