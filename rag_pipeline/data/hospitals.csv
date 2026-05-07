@@ -1,0 +1,16 @@
+hospital_name,location,emergency_services,beds,contact,specialties
+Dhaka Medical College Hospital,Dhaka,Yes,2600,02-55165088,General Medicine;Surgery;Cardiology;Neurology;Oncology
+Square Hospital,Dhaka,Yes,350,02-8159457,Cardiology;Orthopedics;Neurology;Oncology;Gastroenterology
+BIRDEM General Hospital,Dhaka,Yes,652,02-9661551,Diabetes;Endocrinology;Nephrology;Cardiology;Internal Medicine
+Apollo Hospital Dhaka,Dhaka,Yes,400,02-9887661,Oncology;Cardiology;Neurology;Transplant;Gastroenterology
+Labaid Specialized Hospital,Dhaka,Yes,250,02-9120512,Gastroenterology;Cardiology;Urology;Orthopedics;Gynecology
+National Heart Foundation Hospital,Dhaka,Yes,300,02-8116159,Cardiology;Cardiac Surgery;Vascular Surgery
+National Institute of Neurosciences,Dhaka,Yes,500,02-9004235,Neurology;Neurosurgery;Neurophysiology
+National Eye Care,Dhaka,No,150,02-8117171,Ophthalmology;Eye Surgery;Retina;Cornea
+National Chest Disease Hospital,Dhaka,Yes,600,02-9567058,Pulmonology;TB;Respiratory Medicine
+Chittagong Medical College Hospital,Chittagong,Yes,1650,031-619977,General Medicine;Surgery;Gynecology;Pediatrics;Orthopedics
+Shishu Hospital,Chittagong,Yes,300,031-636464,Pediatrics;Neonatology;Child Surgery
+Popular Diagnostic Centre Chittagong,Chittagong,No,100,031-724444,Diagnostics;General Medicine;Dermatology;ENT
+National Mental Health Institute,Dhaka,Yes,400,02-9007831,Psychiatry;Psychology;Addiction Medicine
+National Orthopedic Hospital,Dhaka,Yes,400,02-9001064,Orthopedics;Spine Surgery;Sports Medicine;Physiotherapy
+Maternity Hospital Dhaka,Dhaka,Yes,200,02-8621367,Obstetrics;Gynecology;Neonatology;Fertility

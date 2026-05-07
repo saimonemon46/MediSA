@@ -1,0 +1,1147 @@
+symptom,weight
+abdominal aortic aneurysm,2.5
+abdominal distention,1
+abdominal hernia,1.0
+abnormal appearing skin,1
+abnormal appearing tongue,1
+abnormal breathing sounds,5
+abnormal involuntary movements,1
+abnormal movement of eyelid,1
+abnormal size or shape of ear,1
+abscess of nose,2.0
+abscess of the lung,1.0
+abscess of the pharynx,1.8
+absence of menstruation,1
+abusing alcohol,1
+acanthosis nigricans,1.0
+acariasis,1.0
+achalasia,2.33
+ache all over,1
+acne,1.0
+acne or pimples,1
+actinic keratosis,1.0
+acute bronchiolitis,1.86
+acute bronchitis,1.5
+acute bronchospasm,2.14
+acute fatty liver of pregnancy (aflp),2.0
+acute glaucoma,1.0
+acute kidney injury,2.67
+acute otitis media,1.0
+acute pancreatitis,3.5
+acute respiratory distress syndrome (ards),2.5
+acute sinusitis,1.33
+acute stress reaction,2.0
+adhesive capsulitis of the shoulder,3.0
+adjustment reaction,1.0
+adrenal adenoma,2.0
+adrenal cancer,2.0
+alcohol abuse,1.57
+alcohol intoxication,1.67
+alcohol withdrawal,2.0
+alcoholic liver disease,1.0
+allergic reaction,1
+allergy,1.0
+allergy to animals,1.0
+alopecia,1.0
+alzheimer disease,1.0
+amblyopia,1.67
+amyloidosis,1.67
+amyotrophic lateral sclerosis (als),1.0
+anal fissure,3.0
+anal fistula,2.0
+anemia,3.0
+anemia due to chronic kidney disease,1.8
+anemia due to malignancy,1.5
+anemia of chronic disease,2.0
+angina,3.5
+ankle pain,3
+ankle stiffness or tightness,3
+ankle swelling,1
+ankle weakness,3
+ankylosing spondylitis,2.43
+antisocial behavior,1
+anxiety,1.5
+anxiety and nervousness,1
+aortic valve disease,4.0
+aphakia,1.0
+aphthous ulcer,1.33
+aplastic anemia,2.0
+apnea,1
+appendicitis,2.33
+arm cramps or spasms,1
+arm lump or mass,1
+arm pain,3
+arm stiffness or tightness,3
+arm swelling,1
+arm weakness,3
+arrhythmia,4.0
+arthritis of the hip,2.33
+ascending cholangitis,1.8
+asperger syndrome,1.0
+aspergillosis,1.0
+asthma,3.0
+astigmatism,1.5
+atelectasis,2.2
+athlete's foot,1.0
+atonic bladder,1.67
+atrial fibrillation,2.67
+atrial flutter,4.0
+atrophic skin condition,1.0
+atrophic vaginitis,2.2
+atrophy of the corpus cavernosum,1.0
+attention deficit hyperactivity disorder (adhd),1.0
+autism,1.8
+autonomic nervous system disorder,1.5
+avascular necrosis,2.33
+back cramps or spasms,1
+back mass or lump,1
+back pain,3
+back stiffness or tightness,3
+back swelling,1
+back weakness,3
+balanitis,2.2
+bedwetting,1
+bell palsy,2.0
+benign kidney cyst,2.2
+benign paroxysmal positional vertical (bppv),2.0
+benign prostatic hyperplasia (bph),1.4
+benign vaginal discharge (leukorrhea),1.86
+bipolar disorder,1.0
+birth trauma,2.0
+bladder cancer,1.0
+bladder disorder,2.14
+bladder mass,1
+bladder obstruction,1.4
+bleeding from ear,1
+bleeding from eye,1
+bleeding gums,1
+bleeding in mouth,1
+bleeding or discharge from nipple,1
+blepharitis,1.0
+blepharospasm,1.0
+blindness,1
+blood clots during menstrual periods,5
+blood in stool,5
+blood in urine,5
+bone cancer,1.67
+bone disorder,2.0
+bone spur of the calcaneous,2.5
+bones are painful,3
+bowlegged or knock-kneed,1
+brachial neuritis,1.67
+brain cancer,2.2
+breast cancer,1.67
+breast cyst,1.67
+breast infection (mastitis),1.4
+breathing fast,5
+broken tooth,2.33
+bumps on penis,1
+bunion,1.5
+burn,1.67
+burning abdominal pain,3
+burning chest pain,5
+bursitis,2.33
+callus,1.0
+carbon monoxide poisoning,1.67
+carcinoid syndrome,1.0
+cardiac arrest,2.5
+cardiomyopathy,3.0
+carpal tunnel syndrome,2.0
+cat scratch disease,1.0
+cataract,1.29
+celiac disease,3.0
+cellulitis or abscess of mouth,1.0
+central atherosclerosis,2.5
+central retinal artery or vein occlusion,1.5
+cerebral edema,2.5
+cerebral palsy,1.0
+cervical cancer,1.0
+cervical disorder,2.5
+cervicitis,3.0
+chalazion,1.25
+change in skin mole size or color,1
+changes in stool appearance,1
+chest tightness,5
+chickenpox,1.67
+chills,1
+chlamydia,2.5
+cholecystitis,2.67
+choledocholithiasis,2.5
+cholesteatoma,1.0
+chondromalacia of the patella,2.33
+chorioretinitis,1.67
+chronic back pain,2.5
+chronic constipation,2.6
+chronic glaucoma,1.29
+chronic inflammatory demyelinating polyneuropathy (cidp),1.67
+chronic kidney disease,1.0
+chronic knee pain,3.0
+chronic obstructive pulmonary disease (copd),2.33
+chronic otitis media,1.29
+chronic pain disorder,2.6
+chronic pancreatitis,2.43
+chronic rheumatic fever,3.67
+chronic sinusitis,2.33
+chronic ulcer,2.0
+cirrhosis,3.0
+cloudy eye,1
+coagulation (bleeding) disorder,3.0
+cold sore,1.0
+colonic polyp,3.0
+colorectal cancer,3.67
+common cold,1.86
+complex regional pain syndrome,1.67
+concussion,2.33
+conduct disorder,1.0
+conductive hearing loss,1.67
+congenital heart defect,3.0
+congenital malformation syndrome,3.0
+congestion in chest,5
+conjunctivitis,1.0
+conjunctivitis due to allergy,1.0
+conjunctivitis due to bacteria,1.33
+conjunctivitis due to virus,1.0
+connective tissue disorder,1.67
+constipation,1
+contact dermatitis,1.0
+conversion disorder,2.33
+cornea infection,1.0
+corneal abrasion,1.29
+corneal disorder,1.0
+coronary atherosclerosis,3.0
+coryza,1
+cough,1
+coughing up sputum,1
+cramps and spasms,1
+cranial nerve palsy,1.4
+crohn disease,2.2
+cross-eyed,1
+croup,1.8
+crushing injury,2.0
+cryptococcosis,1.0
+cryptorchidism,1.0
+cushing syndrome,1.0
+cyst of the eyelid,1.0
+cystic fibrosis,1.0
+cysticercosis,1.67
+cystitis,2.33
+de quervain disease,2.33
+decreased appetite,1
+decreased heart rate,1
+decubitus ulcer,1.0
+deep vein thrombosis (dvt),1.0
+degenerative disc disease,2.43
+delirium,1.33
+delusions or hallucinations,1
+dementia,1.0
+dengue fever,2.0
+dental caries,1.29
+depression,1.0
+depressive or psychotic symptoms,1
+dermatitis due to sun exposure,1.0
+developmental disability,1.8
+deviated nasal septum,2.0
+diabetes,1.0
+diabetes insipidus,2.0
+diabetic ketoacidosis,2.2
+diabetic kidney disease,3.0
+diabetic peripheral neuropathy,1.57
+diabetic retinopathy,1.0
+diaper rash,2.11
+diarrhea,3
+difficulty breathing,5
+difficulty eating,1
+difficulty in swallowing,1
+difficulty speaking,1
+diminished hearing,1
+diminished vision,1
+discharge in stools,1
+dislocation of the ankle,1.67
+dislocation of the elbow,1.8
+dislocation of the finger,2.2
+dislocation of the foot,3.0
+dislocation of the hip,2.0
+dislocation of the knee,2.33
+dislocation of the patella,2.33
+dislocation of the shoulder,1.67
+dislocation of the vertebra,3.0
+dislocation of the wrist,2.33
+dissociative disorder,1.4
+disturbance of memory,1
+disturbance of smell or taste,1
+diverticulitis,2.71
+diverticulosis,3.8
+dizziness,3
+double vision,1
+down syndrome,1.8
+drainage in throat,1
+drug abuse,1.0
+drug abuse (barbiturates),1.0
+drug abuse (cocaine),1.5
+drug abuse (methamphetamine),1.0
+drug abuse (opioids),1.0
+drug poisoning due to medication,1.0
+drug reaction,1.67
+drug withdrawal,1.8
+dry eye of unknown cause,1.33
+dry lips,1
+dry or flaky scalp,1
+dumping syndrome,2.33
+dyshidrosis,1.0
+dysthymic disorder,1.0
+ear drum damage,1.0
+ear pain,3
+ear wax impaction,1.29
+early or late onset of menopause,1
+eating disorder,1.0
+ectopic pregnancy,2.6
+ectropion,1.0
+eczema,1.0
+edward syndrome,2.0
+elbow cramps or spasms,1
+elbow lump or mass,1
+elbow pain,3
+elbow stiffness or tightness,3
+elbow swelling,1
+elbow weakness,3
+emotional symptoms,1
+emphysema,2.0
+empyema,3.0
+encephalitis,1.67
+endocarditis,3.0
+endometrial cancer,1.0
+endometrial hyperplasia,1.67
+endometriosis,2.33
+endophthalmitis,2.0
+envenomation from spider or animal bite,1.0
+ependymoma,1.0
+epididymitis,2.33
+epidural hemorrhage,2.0
+epilepsy,1.5
+erectile dysfunction,1.86
+erythema multiforme,2.0
+esophageal cancer,1.67
+esophageal varices,3.0
+esophagitis,2.33
+essential tremor,1.5
+eustachian tube dysfunction (ear disorder),1.86
+excessive anger,1
+excessive appetite,1
+excessive growth,1
+excessive urination at night,1
+extrapyramidal effect of drugs,1.67
+eye alignment disorder,1.0
+eye burns or stings,1
+eye deviation,1
+eye moves abnormally,1
+eye redness,1
+eye strain,1
+eyelid lesion or rash,1
+eyelid retracted,1
+eyelid swelling,1
+facial pain,3
+factitious disorder,1.67
+fainting,5
+fatigue,3
+fears and phobias,1
+feeling cold,1
+feeling hot,1
+feeling hot and cold,1
+feeling ill,1
+feet turned in,1
+female genitalia infection,1.67
+female infertility of unknown cause,1.5
+fetal alcohol syndrome,1.0
+fever,3
+fibroadenoma,1.8
+fibrocystic breast disease,1.67
+fibromyalgia,3.0
+flat feet,1.67
+flatulence,1
+floaters,1.0
+flu,1.67
+flu-like syndrome,1
+fluid in ear,1
+fluid overload,2.33
+fluid retention,1
+flushing,1
+focal weakness,3
+folate deficiency,4.33
+food allergy,1.0
+foot or toe cramps or spasms,1
+foot or toe lump or mass,1
+foot or toe pain,3
+foot or toe stiffness or tightness,3
+foot or toe swelling,1
+foot or toe weakness,3
+foreign body in the ear,1.0
+foreign body in the eye,1.0
+foreign body in the gastrointestinal tract,2.33
+foreign body in the nose,1.0
+foreign body in the throat,1.5
+foreign body in the vagina,1.67
+foreign body sensation in eye,1
+fracture of the ankle,2.5
+fracture of the arm,2.33
+fracture of the facial bones,1.8
+fracture of the finger,2.5
+fracture of the foot,2.33
+fracture of the hand,2.6
+fracture of the jaw,2.5
+fracture of the leg,2.14
+fracture of the neck,3.0
+fracture of the patella,3.0
+fracture of the pelvis,2.0
+fracture of the rib,2.43
+fracture of the shoulder,1.67
+fracture of the skull,1.0
+fracture of the vertebra,3.0
+frequent menstruation,1
+frequent urination,1
+friedrich ataxia,1.67
+frontal headache,1
+frostbite,3.67
+fungal infection of the hair,1.0
+fungal infection of the skin,1.0
+g6pd enzyme deficiency,1.0
+galactorrhea of unknown cause,1.67
+gallstone,2.67
+ganglion cyst,2.0
+gas gangrene,3.0
+gastritis,4.0
+gastroduodenal ulcer,3.67
+gastroesophageal reflux disease (gerd),1.86
+gastrointestinal hemorrhage,4.14
+gastroparesis,2.67
+genital herpes,1.8
+gestational diabetes,1.0
+glaucoma,1.0
+glucocorticoid deficiency,1.67
+goiter,1.5
+gonorrhea,1.8
+gout,2.0
+granuloma inguinale,5.0
+graves disease,1.5
+groin mass,1
+groin pain,3
+guillain barre syndrome,2.5
+gum disease,2.11
+gum pain,3
+gynecomastia,1.5
+hammer toe,1.0
+hand or finger cramps or spasms,1
+hand or finger lump or mass,1
+hand or finger pain,3
+hand or finger stiffness or tightness,3
+hand or finger swelling,1
+hand or finger weakness,3
+hashimoto thyroiditis,1.0
+head and neck cancer,1.4
+head injury,2.0
+headache,1
+headache after lumbar puncture,2.33
+heart attack,3.0
+heart block,3.0
+heart contusion,2.0
+heart failure,3.29
+heartburn,1
+heat exhaustion,2.33
+heat stroke,2.0
+heavy menstrual flow,1
+hemangioma,1.0
+hemarthrosis,2.33
+hematoma,1.0
+hemiplegia,1.8
+hemochromatosis,1.0
+hemolytic anemia,2.0
+hemophilia,1.0
+hemoptysis,1
+hemorrhoids,2.25
+hepatic encephalopathy,2.2
+hepatitis due to a toxin,2.6
+herniated disk,2.43
+herpangina,1.5
+hesitancy,1
+hiatal hernia,2.5
+hidradenitis suppurativa,1.67
+high blood pressure,3.0
+hip lump or mass,1
+hip pain,3
+hip stiffness or tightness,3
+hip swelling,1
+hip weakness,3
+hirschsprung disease,2.0
+hirsutism,1.0
+histoplasmosis,1.67
+hoarse voice,1
+hormone disorder,1.0
+hostile behavior,1
+hot flashes,1
+hpv,1.0
+human immunodeficiency virus infection (hiv),1.0
+huntington disease,2.0
+hurts to breath,1
+hydatidiform mole,2.0
+hydrocele of the testicle,1.67
+hydrocephalus,2.0
+hydronephrosis,3.0
+hypercalcemia,1.67
+hypercholesterolemia,2.5
+hyperemesis gravidarum,3.0
+hypergammaglobulinemia,4.0
+hyperhidrosis,1.5
+hyperkalemia,2.14
+hyperlipidemia,2.33
+hypernatremia,3.0
+hyperopia,1.0
+hyperosmotic hyperketotic state,1.0
+hypertension of pregnancy,1.5
+hypertensive heart disease,1.86
+hypertrophic obstructive cardiomyopathy (hocm),3.0
+hypocalcemia,2.2
+hypoglycemia,2.0
+hypokalemia,2.67
+hyponatremia,3.4
+hypothermia,5.0
+hypothyroidism,2.0
+hypovolemia,2.71
+hysterical behavior,1
+idiopathic absence of menstruation,2.2
+idiopathic excessive menstruation,2.2
+idiopathic infrequent menstruation,2.0
+idiopathic irregular menstrual cycle,1.67
+idiopathic nonmenstrual bleeding,2.33
+idiopathic painful menstruation,1.67
+ileus,3.0
+impetigo,1.0
+impotence,1
+impulse control disorder,1.0
+incontinence of stool,1
+increased heart rate,1
+indigestion,3.0
+induced abortion,1.86
+infant feeding problem,1
+infant spitting up,1
+infection of open wound,1.67
+infectious gastroenteritis,1.33
+infertility,1
+infrequent menstruation,1
+ingrown toe nail,1.29
+inguinal hernia,1.86
+injury of the ankle,2.2
+injury to internal organ,2.5
+injury to the abdomen,3.67
+injury to the arm,2.0
+injury to the face,2.0
+injury to the finger,1.67
+injury to the hand,2.0
+injury to the hip,1.0
+injury to the knee,2.0
+injury to the leg,1.57
+injury to the shoulder,3.0
+injury to the spinal cord,1.67
+injury to the trunk,3.0
+insect bite,1.0
+insomnia,1
+insulin overdose,1.0
+intermenstrual bleeding,1
+interstitial lung disease,2.5
+intertrigo (skin condition),1.0
+intestinal cancer,1.67
+intestinal disease,3.0
+intestinal malabsorption,1.8
+intestinal obstruction,1.8
+intracerebral hemorrhage,3.0
+intracranial abscess,2.33
+intracranial hemorrhage,2.14
+intussusception,3.0
+involuntary urination,1
+iridocyclitis,1.5
+iron deficiency anemia,1.5
+irregular appearing nails,1
+irregular appearing scalp,1
+irregular belly button,1
+irregular heartbeat,1
+irritable bowel syndrome,2.33
+irritable infant,1
+ischemia of the bowel,3.0
+ischemic heart disease,2.5
+itchiness of eye,1
+itching of scrotum,1
+itching of skin,1
+itching of the anus,1
+itching of unknown cause,1.0
+itchy ear(s),1
+itchy eyelid,1
+itchy scalp,1
+jaundice,1
+jaw disorder,1.5
+jaw pain,3
+jaw swelling,1
+joint effusion,2.5
+joint pain,3
+joint stiffness or tightness,3
+joint swelling,1
+juvenile rheumatoid arthritis,2.5
+kaposi sarcoma,2.0
+kidney cancer,2.0
+kidney disease due to longstanding hypertension,1.0
+kidney failure,1.4
+kidney mass,1
+kidney stone,3.0
+knee cramps or spasms,1
+knee ligament or meniscus tear,2.33
+knee lump or mass,1
+knee pain,3
+knee stiffness or tightness,3
+knee swelling,1
+knee weakness,3
+labyrinthitis,2.0
+lack of growth,1
+lacrimation,1
+lactose intolerance,1.5
+laryngitis,1.33
+lateral epicondylitis (tennis elbow),3.0
+leg cramps or spasms,1
+leg lump or mass,1
+leg pain,3
+leg stiffness or tightness,3
+leg swelling,1
+leg weakness,3
+leukemia,3.0
+lewy body dementia,1.0
+lice,1.0
+lichen planus,1.0
+lichen simplex,1.0
+lip sore,1
+lip swelling,1
+lipoma,1.0
+liver cancer,1.67
+liver disease,1.8
+long menstrual periods,1
+loss of sensation,1
+loss of sex drive,1
+low back cramps or spasms,1
+low back pain,3
+low back stiffness or tightness,3
+low back swelling,1
+low back weakness,3
+low self-esteem,1
+low urine output,1
+lower abdominal pain,3
+lower body pain,3
+lumbago,3.0
+lump in throat,1
+lump or mass of breast,1
+lump over jaw,1
+lung cancer,1.4
+lung contusion,2.0
+lyme disease,1.5
+lymphadenitis,2.0
+lymphangitis,2.0
+lymphedema,1.4
+lymphogranuloma venereum,2.0
+lymphoma,1.33
+macular degeneration,1.29
+magnesium deficiency,3.0
+malaria,3.0
+male genitalia infection,1.0
+malignant hypertension,2.5
+marijuana abuse,1.0
+mass in scrotum,1
+mass on ear,1
+mass on eyelid,1
+mass on vulva,1
+mass or swelling around the anus,1
+mastectomy,2.33
+mastoiditis,1.8
+meckel diverticulum,2.0
+melanoma,1.0
+melena,5
+meniere disease,2.2
+meningioma,1.5
+meningitis,2.14
+menopause,1.0
+metabolic disorder,2.0
+metastatic cancer,1.0
+migraine,1.4
+missed abortion,2.43
+mitral valve disease,1.67
+mittelschmerz,3.0
+molluscum contagiosum,1.0
+mononeuritis,2.5
+mononucleosis,1.0
+mouth dryness,1
+mouth pain,3
+mouth ulcer,1
+moyamoya disease,2.0
+mucositis,1.0
+multiple myeloma,1.5
+multiple sclerosis,1.67
+mumps,1.67
+"muscle cramps, contractures, or spasms",1
+muscle pain,3
+muscle spasm,1.8
+muscle stiffness or tightness,3
+muscle swelling,1
+muscle weakness,3
+muscular dystrophy,1.67
+myasthenia gravis,1.5
+myelodysplastic syndrome,1.0
+myocarditis,4.33
+myoclonus,2.0
+myopia,1.0
+myositis,2.0
+nailbiting,1
+narcolepsy,1.5
+nasal congestion,1
+nasal polyp,1.67
+nausea,3
+neck cramps or spasms,1
+neck mass,1
+neck pain,3
+neck stiffness or tightness,3
+neck swelling,1
+neck weakness,3
+necrotizing fasciitis,3.0
+neonatal jaundice,1.0
+nerve impingement near the shoulder,3.0
+neuralgia,2.5
+neurofibromatosis,1.0
+neuropathy due to drugs,1.67
+neurosis,1.0
+nightmares,1
+nonalcoholic liver disease (nash),2.33
+noninfectious gastroenteritis,3.0
+normal pressure hydrocephalus,2.33
+nose deformity,1
+nose disorder,2.33
+nosebleed,1
+obesity,1.0
+obsessions and compulsions,1
+obsessive compulsive disorder (ocd),1.0
+obstructive sleep apnea (osa),1.4
+omphalitis,1.0
+onychomycosis,1.29
+open wound due to trauma,1.0
+open wound from surgical incision,1.0
+open wound of the abdomen,2.0
+open wound of the arm,3.0
+open wound of the back,1.67
+open wound of the cheek,3.0
+open wound of the chest,3.0
+open wound of the ear,2.0
+open wound of the eye,1.5
+open wound of the face,2.0
+open wound of the finger,3.0
+open wound of the foot,1.0
+open wound of the hand,3.0
+open wound of the head,1.0
+open wound of the jaw,1.0
+open wound of the knee,2.0
+open wound of the lip,1.67
+open wound of the mouth,1.0
+open wound of the neck,1.0
+open wound of the nose,2.0
+open wound of the shoulder,2.33
+oppositional disorder,1.0
+optic neuritis,1.0
+oral leukoplakia,1.67
+oral mucosal lesion,1.67
+oral thrush (yeast infection),1.5
+orbital cellulitis,1.67
+orthostatic hypotension,1.8
+osteoarthritis,2.33
+osteochondroma,1.5
+osteochondrosis,3.0
+osteomyelitis,1.4
+osteoporosis,2.33
+otitis externa (swimmer's ear),1.67
+otitis media,2.0
+otosclerosis,2.0
+ovarian cancer,1.67
+ovarian cyst,2.6
+ovarian torsion,2.0
+overflow incontinence,2.2
+pain after an operation,3.0
+pain disorder affecting the neck,2.5
+pain during intercourse,3
+pain during pregnancy,3
+pain in eye,3
+pain in gums,3
+pain in testicles,3
+pain of the anus,3
+pain or soreness of breast,3
+painful menstruation,3
+painful sinuses,3
+painful urination,3
+pallor,1
+palpitations,5
+pancreatic cancer,1.0
+panic attack,3.0
+panic disorder,2.33
+parasitic disease,1.4
+parathyroid adenoma,1.0
+paresthesia,1
+parkinson disease,3.0
+paronychia,1.67
+paroxysmal supraventricular tachycardia,2.33
+paroxysmal ventricular tachycardia,2.0
+pelvic fistula,2.33
+pelvic inflammatory disease,2.43
+pelvic organ prolapse,2.0
+pelvic pain,3
+pelvic pressure,1
+pemphigus,1.67
+penile discharge,1
+penis pain,3
+penis redness,1
+pericarditis,4.0
+peripheral arterial disease,1.5
+peripheral arterial embolism,1.67
+peripheral edema,1
+peripheral nerve disorder,1.67
+perirectal infection,2.0
+peritonitis,2.25
+peritonsillar abscess,1.0
+persistent vomiting of unknown cause,2.5
+personality disorder,1.0
+peyronie disease,1.0
+pharyngitis,1.0
+phimosis,1.0
+pilonidal cyst,2.0
+pinguecula,1.0
+pinworm infection,1.5
+pituitary adenoma,2.0
+pituitary disorder,1.5
+pityriasis rosea,1.0
+placenta previa,1.5
+placental abruption,1.5
+plantar fasciitis,2.43
+pleural effusion,2.33
+plugged feeling in ear,1
+pneumoconiosis,2.33
+pneumonia,1.5
+pneumothorax,1.67
+poisoning due to analgesics,1.0
+poisoning due to anticonvulsants,1.0
+poisoning due to antidepressants,1.0
+poisoning due to antihypertensives,2.33
+poisoning due to antimicrobial drugs,1.0
+poisoning due to antipsychotics,3.0
+poisoning due to ethylene glycol,2.33
+poisoning due to gas,1.67
+poisoning due to opioids,1.5
+poisoning due to sedatives,1.0
+polycystic kidney disease,2.0
+polycystic ovarian syndrome (pcos),1.4
+polycythemia vera,2.0
+polymyalgia rheumatica,2.33
+polyuria,1
+poor circulation,1
+post-traumatic stress disorder (ptsd),1.0
+postoperative infection,1.4
+postpartum depression,1.33
+postpartum problems of the breast,1
+posture problems,1
+preeclampsia,1.8
+pregnancy,1.0
+premature atrial contractions (pacs),2.33
+premature ejaculation,1
+premature ovarian failure,1.0
+premature rupture of amniotic membrane,2.33
+premature ventricular contractions (pvcs),3.4
+premenstrual tension or irritability,1
+premenstrual tension syndrome,1.67
+presbyacusis,1.5
+presbyopia,1.5
+priapism,2.33
+primary immunodeficiency,2.0
+primary insomnia,1.5
+primary kidney disease,1.0
+primary thrombocythemia,2.33
+problem during pregnancy,2.33
+problems during pregnancy,1
+problems with movement,1
+problems with orgasm,1
+problems with shape or size of breast,1
+prostate cancer,3.0
+prostatitis,2.0
+protein deficiency,2.33
+pseudohypoparathyroidism,3.0
+pseudotumor cerebri,1.0
+psoriasis,1.0
+psychosexual disorder,1.4
+psychotic disorder,1.0
+pterygium,1.0
+pulling at ears,1
+pulmonary congestion,1.0
+pulmonary embolism,2.14
+pulmonary eosinophilia,2.33
+pulmonary fibrosis,2.5
+pulmonary hypertension,2.5
+pulmonic valve disease,1.0
+pupils unequal,1
+pus draining from ear,1
+pus in sputum,1
+pus in urine,1
+pyelonephritis,3.0
+pyloric stenosis,3.0
+pyogenic skin infection,1.0
+raynaud disease,2.0
+reactive arthritis,2.0
+recent pregnancy,1
+recent weight loss,1
+rectal bleeding,5
+rectal disorder,3.4
+redness in ear,1
+redness in or around nose,1
+regurgitation,1
+regurgitation.1,1
+restless leg syndrome,1.0
+restlessness,1
+retention of urine,1
+retinal detachment,1.0
+retinopathy due to high blood pressure,1.5
+rhabdomyolysis,3.0
+rheumatic fever,1.0
+rheumatoid arthritis,1.4
+rib pain,3
+ringing in ear,1
+rocky mountain spotted fever,2.0
+rosacea,1.0
+rotator cuff injury,3.0
+salivary gland disorder,1.0
+sarcoidosis,3.0
+scabies,1.0
+scanty menstrual flow,1
+scar,1.0
+scarlet fever,1.33
+schizophrenia,1.0
+sciatica,1.8
+scleritis,1.0
+scleroderma,1.0
+scoliosis,2.6
+scurvy,2.0
+seasonal allergies (hay fever),1.0
+sebaceous cyst,1.0
+seborrheic dermatitis,1.0
+seborrheic keratosis,1.0
+seizures,5
+sensorineural hearing loss,1.0
+sepsis,2.25
+septic arthritis,2.6
+sharp abdominal pain,3
+sharp chest pain,5
+shingles (herpes zoster),2.33
+shortness of breath,1
+shoulder cramps or spasms,1
+shoulder lump or mass,1
+shoulder pain,3
+shoulder stiffness or tightness,3
+shoulder swelling,1
+shoulder weakness,3
+sialoadenitis,1.33
+sick sinus syndrome,2.0
+sickle cell anemia,1.67
+sickle cell crisis,2.6
+side pain,3
+sinus bradycardia,3.0
+sinus congestion,1
+sjogren syndrome,2.0
+skin cancer,1.0
+skin disorder,1.0
+"skin dryness, peeling, scaliness, or roughness",1
+skin growth,1
+skin irritation,1
+skin lesion,1
+skin moles,1
+skin oiliness,1
+skin on arm or hand looks infected,1
+skin on head or neck looks infected,1
+skin on leg or foot looks infected,1
+skin pain,3
+skin pigmentation disorder,1.0
+skin polyp,1.0
+skin rash,1
+skin swelling,1
+sleepiness,1
+sleepwalking,1
+slurring words,1
+smoking or tobacco addiction,1.0
+smoking problems,1
+sneezing,1
+social phobia,1.0
+soft tissue sarcoma,1.0
+somatization disorder,1.67
+sore in nose,1
+sore throat,1
+spermatocele,1.67
+spherocytosis,1.67
+spina bifida,1.0
+spinal stenosis,3.0
+spinocerebellar ataxia,1.67
+spondylitis,3.0
+spondylolisthesis,2.33
+spondylosis,2.0
+spontaneous abortion,1.5
+sporotrichosis,3.0
+spots or clouds in vision,1
+spotting or bleeding during pregnancy,1
+sprain or strain,3.0
+stenosis of the tear duct,1.0
+stiffness all over,3
+stomach bloating,1
+stomach cancer,2.33
+strep throat,1.8
+stress incontinence,2.0
+stricture of the esophagus,2.0
+stroke,1.67
+stuttering or stammering,1
+stye,1.33
+subacute thyroiditis,3.5
+subarachnoid hemorrhage,1.8
+subconjunctival hemorrhage,1.8
+subdural hemorrhage,2.0
+substance-related mental disorder,1.0
+suprapubic pain,3
+sweating,1
+swelling of scrotum,1
+swollen abdomen,1
+swollen eye,1
+swollen lymph nodes,1
+swollen or red tonsils,1
+swollen tongue,1
+symptoms of bladder,1
+symptoms of eye,1
+symptoms of infants,1
+symptoms of prostate,1
+symptoms of the face,1
+symptoms of the kidneys,1
+symptoms of the scrotum and testes,1
+syndrome of inappropriate secretion of adh (siadh),1.67
+syphilis,2.0
+syringomyelia,3.0
+systemic lupus erythematosis (sle),2.5
+teething syndrome,2.0
+temper problems,1
+temporary or benign blood in urine,2.67
+temporomandibular joint disorder,2.0
+tendinitis,2.6
+tension headache,1.5
+testicular cancer,1.0
+testicular disorder,1.4
+testicular torsion,2.2
+thalassemia,2.0
+thirst,1
+thoracic aortic aneurysm,2.0
+thoracic outlet syndrome,3.0
+threatened pregnancy,2.33
+throat feels tight,1
+throat irritation,1
+throat redness,1
+throat swelling,1
+thrombocytopenia,2.33
+thrombophlebitis,1.33
+thyroid cancer,1.5
+thyroid disease,1.0
+thyroid nodule,1.5
+tic (movement) disorder,1.0
+tietze syndrome,1.67
+tinnitus of unknown cause,1.33
+tongue bleeding,1
+tongue lesions,1
+tongue pain,3
+tonsillar hypertrophy,1.0
+tonsillitis,1.67
+too little hair,1
+tooth abscess,1.33
+tooth disorder,1.86
+toothache,1
+torticollis,2.0
+tourette syndrome,1.0
+toxic multinodular goiter,1.0
+toxoplasmosis,1.0
+tracheitis,1.33
+transient ischemic attack,1.4
+trichiasis,1.0
+trichinosis,1.0
+trichomonas infection,2.6
+tricuspid valve disease,1.0
+trigeminal neuralgia,1.5
+trigger finger (finger disorder),3.0
+tuberculosis,2.0
+tuberous sclerosis,3.0
+turner syndrome,1.0
+typhoid fever,3.0
+ulcerative colitis,3.8
+underweight,1
+unpredictable menstruation,1
+unusual color or odor to urine,1
+unwanted hair,1
+upper abdominal pain,3
+urethral disorder,2.33
+urethral stricture,1.33
+urethral valves,3.0
+urethritis,1.8
+urge incontinence,2.5
+urinary tract infection,3.0
+urinary tract obstruction,3.0
+uterine atony,2.5
+uterine cancer,1.0
+uterine contractions,1
+uterine fibroids,1.89
+uveitis,1.67
+vacterl syndrome,2.0
+vaginal bleeding after menopause,1
+vaginal cyst,2.0
+vaginal discharge,1
+vaginal dryness,1
+vaginal itching,1
+vaginal pain,3
+vaginal redness,1
+vaginal yeast infection,2.2
+vaginismus,3.0
+vaginitis,2.33
+valley fever,2.33
+varicocele of the testicles,2.0
+varicose veins,1.33
+vasculitis,1.67
+venous insufficiency,1.5
+vertebrobasilar insufficiency,3.5
+vesicoureteral reflux,4.0
+viral exanthem,1.0
+viral hepatitis,2.0
+viral warts,1.0
+vitamin a deficiency,2.0
+vitamin b12 deficiency,1.5
+vitamin d deficiency,2.33
+vitreous degeneration,1.0
+vitreous hemorrhage,1.67
+vocal cord polyp,1.0
+volvulus,2.33
+vomiting,3
+vomiting blood,5
+von willebrand disease,2.33
+vulvar cancer,1.0
+vulvar disorder,1.4
+vulvar irritation,1
+vulvar sore,1
+vulvodynia,3.0
+warts,1
+weakness,3
+weight gain,1
+wernicke korsakoff syndrome,1.0
+wheezing,1
+white blood cell disease,2.33
+white discharge from eye,1
+whooping cough,1.5
+wilson disease,1.0
+wrinkles on skin,1
+wrist lump or mass,1
+wrist pain,3
+wrist stiffness or tightness,3
+wrist swelling,1
+wrist weakness,3
+yeast infection,2.0
+zenker diverticulum,3.0
