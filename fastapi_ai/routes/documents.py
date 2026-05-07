@@ -130,31 +130,120 @@ def _normalise_lab_results(value) -> list[dict]:
     return labs
 
 
+def _extract_prescription_medications(raw_text: str) -> list[dict]:
+    lower = raw_text.lower()
+    start = lower.find("medication prescribed")
+    if start < 0:
+        start = lower.find("medicine")
+    if start < 0:
+        return []
+
+    section = raw_text[start:]
+    end_markers = ["\nadvice", "\nfollow up", "\nfollow-up", "\nthis prescription", "\ndoctor", "\nreg."]
+    end_positions = [section.lower().find(marker) for marker in end_markers if section.lower().find(marker) > 0]
+    if end_positions:
+        section = section[: min(end_positions)]
+
+    route_pattern = r"(Oral|Injection|Injectable|Topical|IV|IM|SC|Subcutaneous|Inhalation|Other)"
+    duration_pattern = r"(\d+\s*(?:day|days|week|weeks|month|months))"
+    dose_unit_pattern = r"(\d+(?:,\d{3})*(?:\.\d+)?\s*(?:mg|mcg|g|ml|iu|units?|ng/ml|ngiml)|-)"
+    freq_pattern = (
+        r"((?:\d+\s*)?(?:tablet|tab|capsule|cap|spoon|drop|drops|ml)\s+"
+        r"(?:once|twice|thrice|daily|weekly|monthly|every|as needed|if needed|[0-9]).*)"
+    )
+
+    medications = []
+    seen = set()
+    for raw_line in section.splitlines():
+        line = _clean(raw_line)
+        if not line or re.search(r"^(s\.?no|medicine|strength|dosage|duration|route|instructions)\b", line, re.I):
+            continue
+        if not re.match(r"^\d+\s*\|?\s*", line):
+            continue
+
+        line = re.sub(r"^\d+\s*\|?\s*", "", line).strip()
+        line = re.sub(r"^(tab|tablet|cap|capsule|syp|syrup|inj|injection)\.?\s+", "", line, flags=re.I)
+
+        tail_match = re.search(duration_pattern + r"\s+" + route_pattern + r"\s*(.*)$", line, re.I)
+        if not tail_match:
+            continue
+
+        duration = _clean(tail_match.group(1))
+        route = _clean(tail_match.group(2))
+        instructions = _clean(tail_match.group(3))
+        before_tail = line[: tail_match.start()].strip(" -|")
+
+        freq_match = re.search(freq_pattern, before_tail, re.I)
+        if freq_match:
+            frequency = _clean(freq_match.group(1))
+            name_strength = before_tail[: freq_match.start()].strip(" -|")
+        else:
+            frequency = ""
+            name_strength = before_tail
+
+        dosage = ""
+        dose_matches = list(re.finditer(dose_unit_pattern, name_strength, re.I))
+        if dose_matches:
+            dose_match = dose_matches[-1]
+            dosage = _clean(dose_match.group(1))
+            name = _clean(name_strength[: dose_match.start()])
+        else:
+            name = _clean(name_strength)
+
+        # OCR can turn "60,000 IU" into "60,000 1". Keep the medicine instead of
+        # dropping the row; the raw line remains available in instructions.
+        name = re.sub(r"\s+\d+(?:,\d{3})?\s+\d+$", "", name).strip()
+        if not name:
+            continue
+
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        medications.append(
+            {
+                "name": name[:80],
+                "dosage": dosage,
+                "frequency": frequency,
+                "duration": duration,
+                "instructions": instructions,
+                "route": route,
+            }
+        )
+
+    return medications
+
+
 def _heuristic_document_analysis(raw_text: str) -> dict:
     lower = raw_text.lower()
     doc_type = "Prescription" if re.search(r"\b(tab|tablet|cap|capsule|syp|syrup|inj|injection|mg|ml)\b", lower) else "Medical Document"
     if re.search(r"\b(hemoglobin|platelet|wbc|rbc|creatinine|glucose|cholesterol|tsh|alt|ast)\b", lower):
         doc_type = "Lab Report"
+    if "medication prescribed" in lower or "prescription" in lower:
+        doc_type = "Prescription"
 
-    medications = []
-    for line in raw_text.splitlines():
-        clean_line = _clean(line)
-        if not re.search(r"\b(mg|mcg|g|ml|tablet|tab|capsule|cap|syrup|inj)\b", clean_line, re.I):
-            continue
-        dose_match = re.search(r"(\d+(?:\.\d+)?\s?(?:mg|mcg|g|ml|iu|units?))", clean_line, re.I)
-        name = re.sub(r"^\W*(tab|tablet|cap|capsule|syp|syrup|inj|injection)\.?\s*", "", clean_line, flags=re.I)
-        name = re.split(r"\s+\d", name, maxsplit=1)[0].strip(" -:,")
-        if name and dose_match:
-            medications.append(
-                {
-                    "name": name[:80],
-                    "dosage": dose_match.group(1),
-                    "frequency": "",
-                    "duration": "",
-                    "instructions": clean_line,
-                    "route": "",
-                }
-            )
+    medications = _extract_prescription_medications(raw_text)
+    if not medications:
+        for line in raw_text.splitlines():
+            clean_line = _clean(line)
+            if not re.search(r"\b(mg|mcg|g|ml|tablet|tab|capsule|cap|syrup|inj)\b", clean_line, re.I):
+                continue
+            if re.search(r"\b(hemoglobin|platelet|wbc|rbc|creatinine|glucose|cholesterol|triglycerides|hdl|ldl|tsh|alt|ast|blood sugar|lipid profile)\b", clean_line, re.I):
+                continue
+            dose_match = re.search(r"(\d+(?:\.\d+)?\s?(?:mg|mcg|g|ml|iu|units?))", clean_line, re.I)
+            name = re.sub(r"^\W*(tab|tablet|cap|capsule|syp|syrup|inj|injection)\.?\s*", "", clean_line, flags=re.I)
+            name = re.split(r"\s+\d", name, maxsplit=1)[0].strip(" -:,")
+            if name and dose_match:
+                medications.append(
+                    {
+                        "name": name[:80],
+                        "dosage": dose_match.group(1),
+                        "frequency": "",
+                        "duration": "",
+                        "instructions": clean_line,
+                        "route": "",
+                    }
+                )
 
     labs = []
     for line in raw_text.splitlines():
@@ -241,5 +330,9 @@ async def analyze_document(req: DocumentAnalysisRequest):
         )
     except Exception:
         result = _heuristic_document_analysis(raw_text)
+
+    local_meds = _extract_prescription_medications(raw_text)
+    if local_meds and not _normalise_medications(result.get("medications")):
+        result["medications"] = local_meds
 
     return _normalise_analysis(result, req.document_id, raw_text, method, extraction_error)
