@@ -56,8 +56,12 @@ def node_rag_retrieval(state: TriageState) -> TriageState:
 
 def node_generate_questions(state: TriageState) -> TriageState:
     """Generate follow-up questions using LLM + RAG context."""
+    image_hint = (
+        "\n\nIf this may involve a visible rash, cut, wound, burn, swelling, pus, skin infection, or injury, "
+        "include one question asking the user to upload a clear photo of the affected area if they feel comfortable."
+    )
     prompt_user = FOLLOWUP_QUESTIONS_USER.format(
-        symptom=state["primary_symptom"],
+        symptom=state["primary_symptom"] + image_hint,
         context=state["retrieved_context"]
     )
     try:
@@ -96,6 +100,13 @@ def node_triage_engine(state: TriageState) -> TriageState:
             state.get("user_answers", [])
         ))
     ) or "No follow-up answers provided."
+    if state.get("user_answers"):
+        image_answers = [a for a in state["user_answers"] if "Uploaded image observations:" in a]
+        if image_answers:
+            answers_text += (
+                "\n\nImage context note: Uploaded image observations are supportive triage context only, "
+                "not a definitive visual diagnosis.\n" + "\n".join(image_answers)
+            )
 
     prompt_user = TRIAGE_ANALYSIS_USER.format(
         symptom=state["primary_symptom"],

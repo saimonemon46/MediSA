@@ -51,6 +51,50 @@
   cursor: pointer;
   color: var(--ink-muted);
 }
+.chat-attachment-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.image-upload-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.image-upload-btn:hover { border-color: var(--teal); color: var(--teal); }
+.image-chip {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: #fff;
+}
+.image-chip.visible { display: flex; }
+.image-chip img {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+.image-chip button {
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 16px;
+}
 </style>
 </head>
 <body>
@@ -97,6 +141,15 @@
       </div>
 
       <div class="chat-input-area">
+        <div class="chat-attachment-bar">
+          <input id="symptomImageInput" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleImageSelection(event)">
+          <button type="button" class="image-upload-btn" onclick="document.getElementById('symptomImageInput').click()">Attach rash/cut photo</button>
+          <div class="image-chip" id="imageChip">
+            <img id="imagePreview" alt="Selected symptom image">
+            <span id="imageFileName">Image selected</span>
+            <button type="button" onclick="clearSelectedImage()" aria-label="Remove selected image">&times;</button>
+          </div>
+        </div>
         <textarea id="chatInput" placeholder="Describe your symptoms..." rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
           oninput="autoResize(this)"></textarea>

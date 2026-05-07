@@ -11,6 +11,9 @@ let stage = 'initial'; // initial | followup | analysis | done
 let followupAnswers = [];
 let primarySymptom = '';
 let currentReport = null;
+let selectedImageFile = null;
+let selectedImageUrl = '';
+let symptomImageAnalyses = [];
 
 function getUser() {
   try { return JSON.parse(sessionStorage.getItem('mediai_user') || 'null'); } catch { return null; }
@@ -67,6 +70,108 @@ function escHtml(t) {
   return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function handleImageSelection(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+    addMessage('Please attach a JPG, PNG, or WEBP image.', 'ai');
+    event.target.value = '';
+    return;
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    addMessage('That image is larger than 8MB. Please attach a smaller photo.', 'ai');
+    event.target.value = '';
+    return;
+  }
+  if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
+  selectedImageFile = file;
+  selectedImageUrl = URL.createObjectURL(file);
+  document.getElementById('imagePreview').src = selectedImageUrl;
+  document.getElementById('imageFileName').textContent = file.name;
+  document.getElementById('imageChip').classList.add('visible');
+}
+
+function clearSelectedImage() {
+  selectedImageFile = null;
+  if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
+  selectedImageUrl = '';
+  document.getElementById('symptomImageInput').value = '';
+  document.getElementById('imageChip').classList.remove('visible');
+  document.getElementById('imagePreview').removeAttribute('src');
+}
+
+function addImageMessage(file, sender) {
+  const box = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = sender === 'ai' ? 'msg msg-ai' : 'msg msg-user';
+  const url = URL.createObjectURL(file);
+  div.innerHTML = `
+    ${sender === 'ai' ? '<div class="msg-label">MediAI</div>' : ''}
+    <div style="font-size:12px;margin-bottom:8px">${sender === 'ai' ? 'Image received' : 'Attached image'}</div>
+    <img src="${url}" alt="Uploaded symptom image" style="max-width:220px;max-height:180px;border-radius:8px;display:block;object-fit:cover">
+  `;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function formatImageAnalysisForAnswer(analysis) {
+  const observations = Array.isArray(analysis?.visible_observations) ? analysis.visible_observations.join('; ') : '';
+  const redFlags = Array.isArray(analysis?.red_flags) ? analysis.red_flags.join('; ') : '';
+  return [
+    `Uploaded image observations: type=${analysis?.image_type || 'unclear'}`,
+    observations ? `visible observations=${observations}` : '',
+    analysis?.possible_relevance ? `possible relevance=${analysis.possible_relevance}` : '',
+    redFlags ? `visual red flags=${redFlags}` : '',
+    analysis?.confidence ? `image confidence=${analysis.confidence}` : '',
+    'The image should be used as supportive context only, not as a definitive diagnosis.'
+  ].filter(Boolean).join('. ');
+}
+
+function imageAnalysisSummary(analysis) {
+  const observations = Array.isArray(analysis?.visible_observations) && analysis.visible_observations.length
+    ? analysis.visible_observations.join('\n- ')
+    : 'No detailed visual observations were available.';
+  const redFlags = Array.isArray(analysis?.red_flags) && analysis.red_flags.length
+    ? '\n\nVisual red flags noted:\n- ' + analysis.red_flags.join('\n- ')
+    : '';
+  return `I reviewed the uploaded image as supportive triage context only.\n\nImage type: ${analysis?.image_type || 'unclear'}\nVisible observations:\n- ${observations}${redFlags}\n\nA clinician should review the area directly if symptoms are worsening, spreading, painful, draining pus, or accompanied by fever.`;
+}
+
+async function analyzeSelectedImage() {
+  if (!selectedImageFile) return null;
+  const file = selectedImageFile;
+  addImageMessage(file, 'user');
+  clearSelectedImage();
+  addTyping();
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(AI_BASE + '/analyze-symptom-image', {
+      method: 'POST',
+      body: fd
+    });
+    const data = await res.json();
+    removeTyping();
+    if (!res.ok) throw new Error(data.detail || 'Could not analyze the image.');
+    symptomImageAnalyses.push(data);
+    addMessage(imageAnalysisSummary(data), 'ai');
+    return data;
+  } catch (err) {
+    removeTyping();
+    const fallback = {
+      image_type: 'unclear',
+      visible_observations: ['Image was attached, but automatic image analysis was unavailable.'],
+      possible_relevance: 'The image should still be mentioned to a clinician during assessment.',
+      red_flags: [],
+      confidence: 'low',
+      needs_clinician_review: true
+    };
+    symptomImageAnalyses.push(fallback);
+    addMessage(err?.message || 'I could not analyze the image automatically, but I will include that an image was uploaded.', 'ai');
+    return fallback;
+  }
+}
+
 function setSendDisabled(v) {
   document.getElementById('sendBtn').disabled = v;
   document.getElementById('chatInput').disabled = v;
@@ -75,18 +180,22 @@ function setSendDisabled(v) {
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && !selectedImageFile) return;
   input.value = '';
   input.style.height = 'auto';
-  addMessage(text, 'user');
+  if (text) addMessage(text, 'user');
   setSendDisabled(true);
 
+  const imageAnalysis = await analyzeSelectedImage();
+  const imageAnswer = imageAnalysis ? formatImageAnalysisForAnswer(imageAnalysis) : '';
+
   if (stage === 'initial') {
-    primarySymptom = text;
-    await startSession(text);
+    primarySymptom = [text, imageAnswer].filter(Boolean).join('\n\n') || 'Uploaded symptom image for assessment';
+    await startSession(primarySymptom);
   } else if (stage === 'followup') {
-    followupAnswers.push(text);
-    await submitAnswer(text);
+    const answer = [text, imageAnswer].filter(Boolean).join('\n\n');
+    followupAnswers.push(answer);
+    await submitAnswer(answer);
   }
 }
 
@@ -202,6 +311,7 @@ function cacheAssessment(report) {
     session_id: sessionId,
     primary_symptom: primarySymptom,
     answers: followupAnswers,
+    symptom_image_analyses: symptomImageAnalyses,
     report,
   };
   sessionStorage.setItem('mediai_last_assessment', JSON.stringify(payload));
@@ -213,7 +323,8 @@ function reportContextText(report) {
     report?.guidance || '',
     report?.explanation || '',
     Array.isArray(report?.symptoms_listed) ? report.symptoms_listed.join(', ') : '',
-    followupAnswers.join(', ')
+    followupAnswers.join(', '),
+    symptomImageAnalyses.map(formatImageAnalysisForAnswer).join(' ')
   ].filter(Boolean).join(' ');
 }
 
@@ -243,6 +354,19 @@ function renderReportPanel(r) {
   const symptoms = Array.isArray(r.symptoms_listed)
     ? r.symptoms_listed.map(s => `<li>${escHtml(s)}</li>`).join('')
     : `<li>${escHtml(primarySymptom)}</li>`;
+  const imageSection = symptomImageAnalyses.length ? `
+    <div class="report-section">
+      <h4>Uploaded image review</h4>
+      ${symptomImageAnalyses.map(item => `
+        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-weight:500">${escHtml(item.image_type || 'Symptom image')}</div>
+          <p>${escHtml((item.visible_observations || []).join(' ') || item.possible_relevance || 'Image was included as supportive context.')}</p>
+          ${(item.red_flags || []).length ? `<p style="color:var(--red-danger);font-weight:500">Red flags: ${escHtml(item.red_flags.join(', '))}</p>` : ''}
+          <p class="text-muted">Confidence: ${escHtml(item.confidence || 'low')}. Clinician review recommended.</p>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
 
   document.getElementById('reportContent').innerHTML = `
     <div class="report-header" style="margin:-28px -28px 24px;padding:24px 28px;background:var(--teal);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0">
@@ -255,6 +379,8 @@ function renderReportPanel(r) {
       <h4>Symptoms reported</h4>
       <ul class="symptoms-list">${symptoms}</ul>
     </div>
+
+    ${imageSection}
 
     <div class="report-section">
       <h4>AI reasoning</h4>

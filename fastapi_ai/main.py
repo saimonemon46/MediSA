@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.triage import router as triage_router
 from routes.documents import router as docs_router
 from routes.doctors import router as doctors_router
+from routes.symptom_images import router as symptom_images_router
 import uvicorn
 
 app = FastAPI(
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(triage_router)
 app.include_router(docs_router)
 app.include_router(doctors_router)
+app.include_router(symptom_images_router)
 
 
 @app.get("/")
@@ -39,6 +41,7 @@ async def root():
             "POST /generate-questions",
             "POST /generate-report",
             "POST /analyze-document",
+            "POST /analyze-symptom-image",
             "GET  /doctor-recommendation",
             "POST /doctor-recommendation",
         ]

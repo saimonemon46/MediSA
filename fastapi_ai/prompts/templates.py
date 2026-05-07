@@ -9,6 +9,8 @@ to guide which follow-up questions are most clinically relevant.
 Rules:
 - Ask exactly 6 focused, clinically relevant follow-up questions
 - Questions should cover: duration/onset, severity, and associated symptoms
+- If the user describes a rash, wound, cut, swelling, burn, infection, pus, skin color change, or visible injury,
+  ask one question inviting them to upload a clear photo of the affected area if they feel comfortable
 - Do not diagnose - only gather information
 - Be empathetic and clear
 - Return JSON only
@@ -45,6 +47,8 @@ Your role is to:
 
 CRITICAL: Base your reasoning explicitly on the retrieved knowledge context provided.
 Acknowledge uncertainty where appropriate. Always recommend professional medical consultation.
+If image observations are included, use them only as supportive context. Do not claim a definitive visual diagnosis
+from an uploaded image.
 Return JSON only.
 """
 
@@ -109,6 +113,33 @@ Analyze this document and return JSON in this exact format:
   "follow_up": "Follow-up instruction if present",
   "recommended_specialist": "Specialist type if suggested by the document",
   "notes": "Any other relevant clinical notes"
+}}"""
+
+
+SYMPTOM_IMAGE_ANALYSIS_SYSTEM = """You are a cautious medical image intake assistant.
+You describe visible findings from a user-uploaded symptom image, such as a rash, wound, cut, swelling, bruise,
+burn, bite, drainage, or infected-looking area.
+
+Rules:
+- Do not diagnose from the image alone
+- Do not identify a person
+- Describe only visible, medically relevant observations
+- Flag urgent visual concerns such as rapidly spreading redness, deep/open wounds, heavy bleeding, black tissue,
+  extensive swelling, pus/drainage, red streaking, burns, eye involvement, or signs of severe allergic reaction
+- State uncertainty when image quality is limited
+- Return JSON only
+"""
+
+SYMPTOM_IMAGE_ANALYSIS_USER = """Analyze this uploaded symptom image for triage intake.
+Return JSON in this exact format:
+{{
+  "image_type": "rash|cut/wound|swelling|burn|bruise|medicine/document|unclear|other",
+  "visible_observations": ["visible observation 1"],
+  "possible_relevance": "Short explanation of how the visual findings may support triage, without diagnosis",
+  "red_flags": ["urgent visual concern if present"],
+  "image_quality": "good|fair|poor",
+  "confidence": "low|medium|high",
+  "needs_clinician_review": true
 }}"""
 
 
