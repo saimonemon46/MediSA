@@ -54,39 +54,95 @@
 .chat-attachment-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 .image-upload-btn {
-  border: 1px solid var(--border);
-  background: #fff;
+  border: 1.5px dashed rgba(13,107,94,0.35);
+  background: var(--teal-light);
   color: var(--ink);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  transition: border-color 0.2s, background 0.2s, transform 0.1s;
 }
-.image-upload-btn:hover { border-color: var(--teal); color: var(--teal); }
+.image-upload-btn:hover {
+  border-color: var(--teal);
+  background: #fff;
+  color: var(--teal);
+  transform: translateY(-1px);
+}
+.image-upload-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--teal);
+  font-size: 16px;
+  line-height: 1;
+}
+.image-upload-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  text-align: left;
+}
+.image-upload-copy strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.image-upload-copy span {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
 .image-chip {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 8px;
+  padding: 7px 9px;
   font-size: 12px;
   color: var(--ink-muted);
   background: #fff;
+  max-width: min(100%, 360px);
 }
 .image-chip.visible { display: flex; }
 .image-chip img {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border-radius: 6px;
   object-fit: cover;
   border: 1px solid var(--border);
+}
+.image-chip-details {
+  min-width: 0;
+  line-height: 1.25;
+}
+.image-chip-details strong,
+.image-chip-details span {
+  display: block;
+}
+.image-chip-details strong {
+  color: var(--ink);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.image-chip-details span {
+  font-size: 11px;
 }
 .image-chip button {
   border: 0;
@@ -94,6 +150,29 @@
   color: var(--ink-muted);
   cursor: pointer;
   font-size: 16px;
+  padding: 4px;
+}
+.chat-input-area {
+  flex-direction: column;
+  align-items: stretch;
+}
+.chat-compose-row {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+@media (max-width: 768px) {
+  .chat-attachment-bar {
+    align-items: stretch;
+  }
+  .image-upload-btn,
+  .image-chip {
+    width: 100%;
+  }
+  .chat-compose-row {
+    gap: 8px;
+  }
 }
 </style>
 </head>
@@ -143,17 +222,28 @@
       <div class="chat-input-area">
         <div class="chat-attachment-bar">
           <input id="symptomImageInput" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleImageSelection(event)">
-          <button type="button" class="image-upload-btn" onclick="document.getElementById('symptomImageInput').click()">Attach rash/cut photo</button>
+          <button type="button" class="image-upload-btn" onclick="document.getElementById('symptomImageInput').click()">
+            <span class="image-upload-icon">+</span>
+            <span class="image-upload-copy">
+              <strong>Upload rash, cut, or wound photo</strong>
+              <span>Optional JPG, PNG, or WEBP image</span>
+            </span>
+          </button>
           <div class="image-chip" id="imageChip">
             <img id="imagePreview" alt="Selected symptom image">
-            <span id="imageFileName">Image selected</span>
+            <span class="image-chip-details">
+              <strong id="imageFileName">Image selected</strong>
+              <span id="imageFileMeta">Ready to send with your message</span>
+            </span>
             <button type="button" onclick="clearSelectedImage()" aria-label="Remove selected image">&times;</button>
           </div>
         </div>
-        <textarea id="chatInput" placeholder="Describe your symptoms..." rows="1"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
-          oninput="autoResize(this)"></textarea>
-        <button class="btn-send" onclick="sendMessage()" id="sendBtn">Send</button>
+        <div class="chat-compose-row">
+          <textarea id="chatInput" placeholder="Describe your symptoms..." rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+            oninput="autoResize(this)"></textarea>
+          <button class="btn-send" onclick="sendMessage()" id="sendBtn">Send</button>
+        </div>
       </div>
     </div>
   </main>

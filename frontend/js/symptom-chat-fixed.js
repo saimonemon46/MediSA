@@ -88,6 +88,9 @@ function handleImageSelection(event) {
   selectedImageUrl = URL.createObjectURL(file);
   document.getElementById('imagePreview').src = selectedImageUrl;
   document.getElementById('imageFileName').textContent = file.name;
+  const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+  const meta = document.getElementById('imageFileMeta');
+  if (meta) meta.textContent = `${sizeMb}MB image ready to send`;
   document.getElementById('imageChip').classList.add('visible');
 }
 
@@ -98,6 +101,8 @@ function clearSelectedImage() {
   document.getElementById('symptomImageInput').value = '';
   document.getElementById('imageChip').classList.remove('visible');
   document.getElementById('imagePreview').removeAttribute('src');
+  const meta = document.getElementById('imageFileMeta');
+  if (meta) meta.textContent = 'Ready to send with your message';
 }
 
 function addImageMessage(file, sender) {
