@@ -24,7 +24,7 @@ from fastapi_ai.prompts.templates import (
     FOLLOWUP_QUESTIONS_SYSTEM, FOLLOWUP_QUESTIONS_USER,
     TRIAGE_ANALYSIS_SYSTEM, TRIAGE_ANALYSIS_USER,
     EXPLANATION_SYSTEM, EXPLANATION_USER,
-)
+    )
 
 
 # ---- State schema ----
