@@ -98,13 +98,30 @@ function reportDoctorLink(r) {
   return `doctors.html?${params.toString()}`;
 }
 
-function renderReportImage(path) {
-  if (!path) return "";
-  const url = `${PHP_BASE}/${path}`;
+function renderReportImage(r) {
+  if (!r.image_path && !r.image_analysis) return "";
+
+  const path = r.image_path || r.image_analysis?.image_path;
+  const analysis = r.image_analysis;
+  const url = path ? `${PHP_BASE}/${path}` : "";
+
+  let analysisHtml = "";
+  if (analysis) {
+    analysisHtml = `
+      <div style="margin-top:12px">
+        <div style="font-weight:500">${escHtml(analysis.image_type || "Symptom image")}</div>
+        <p style="margin:4px 0">${escHtml((analysis.visible_observations || []).join(" ") || analysis.possible_relevance || "Image was included as supportive context.")}</p>
+        ${(analysis.red_flags || []).length ? `<p style="color:var(--red-danger);font-weight:500;margin:4px 0">Red flags: ${escHtml(analysis.red_flags.join(", "))}</p>` : ""}
+        <p class="text-muted" style="font-size:12px;margin:4px 0">AI Confidence: ${escHtml(analysis.confidence || "low")}. Clinician review recommended.</p>
+      </div>
+    `;
+  }
+
   return `
     <div class="report-section" style="margin-bottom:18px">
-      <h4>Uploaded image</h4>
-      <img src="${escHtml(url)}" alt="Uploaded symptom image" style="max-width:100%;border-radius:12px;border:1px solid var(--border);display:block">
+      <h4>Uploaded image review</h4>
+      ${url ? `<img src="${escHtml(url)}" alt="Uploaded symptom image" style="max-width:100%;border-radius:12px;border:1px solid var(--border);display:block;margin-bottom:12px">` : ""}
+      ${analysisHtml}
     </div>
   `;
 }
@@ -150,7 +167,7 @@ function renderReportsList(reports) {
               .join(", ")}</div>
           </div>
         </div>
-        ${r.image_path ? `<div style="margin-top:16px"><img src="${escHtml(PHP_BASE + '/' + r.image_path)}" alt="Report image" style="max-width:100%;height:auto;border-radius:10px;border:1px solid var(--border)"></div>` : ""}
+        ${r.image_path ? `<div style="margin-top:16px"><img src="${escHtml(PHP_BASE + "/" + r.image_path)}" alt="Report image" style="max-width:100%;height:auto;border-radius:10px;border:1px solid var(--border)"></div>` : ""}
         <div style="margin-top:16px;font-size:13px;color:var(--ink-muted)">Click to view full report -></div>
       </div>
     </div>`,
@@ -183,7 +200,7 @@ function openReport(id) {
         <h4>AI reasoning (RAG-grounded)</h4>
         <p>${escHtml(r.reasoning)}</p>
       </div>
-      ${renderReportImage(r.image_path)}
+      ${renderReportImage(r)}
       <div class="report-section">
         <h4>Recommended specialist</h4>
         <p style="font-weight:500">${escHtml(r.recommended_specialist)}</p>

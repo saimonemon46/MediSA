@@ -384,6 +384,9 @@ async function persistReport(report) {
     image_path: symptomImageAnalyses.length
       ? symptomImageAnalyses[0].image_path || null
       : null,
+    image_analysis: symptomImageAnalyses.length
+      ? symptomImageAnalyses[0]
+      : null,
   };
 
   const saveRes = await fetch(PHP_BASE + "/api/reports.php", {

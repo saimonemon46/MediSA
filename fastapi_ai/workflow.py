@@ -10,7 +10,8 @@ from typing import TypedDict, List, Annotated, Optional
 import operator
 
 try:
-    from langgraph.graph import StateGraph, END
+    
+    from langgraph.graph import StateGraph,END
     LANGGRAPH_AVAILABLE = True
 except ImportError:
     LANGGRAPH_AVAILABLE = False
@@ -188,13 +189,22 @@ def node_generate_explanation(state: TriageState) -> TriageState:
 def node_generate_report(state: TriageState) -> TriageState:
     """Compile the final structured report."""
     r = state["triage_result"]
+    reasoning = r.get("reasoning", "")
+    
+    # Enrich reasoning with image assessment if available
+    if state.get("image_analysis"):
+        img = state["image_analysis"]
+        obs = ", ".join(img.get("visible_observations", []))
+        img_summary = f"\n\nIMAGE ASSESSMENT: The uploaded {img.get('image_type', 'image')} showed {obs or 'no specific findings'}. Relevance: {img.get('possible_relevance', 'N/A')}."
+        reasoning += img_summary
+
     state["report"] = {
         "session_id":            state["session_id"],
         "user_id":               state["user_id"],
         "possible_condition":    r.get("possible_condition", "Unknown"),
         "urgency":               r.get("urgency", "medium"),
         "recommended_specialist":r.get("recommended_specialist", "General Physician"),
-        "reasoning":             r.get("reasoning", ""),
+        "reasoning":             reasoning,
         "guidance":              r.get("guidance", ""),
         "symptoms_listed":       r.get("symptoms_listed", [state["primary_symptom"]]),
         "explanation":           state.get("explanation", ""),
