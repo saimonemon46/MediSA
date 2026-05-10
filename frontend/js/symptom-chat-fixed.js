@@ -190,6 +190,24 @@ async function analyzeSelectedImage() {
       body: fd,
     });
     const data = await res.json();
+
+    // Also upload to PHP for permanent storage
+    try {
+      const phpFd = new FormData();
+      phpFd.append("document", file);
+      phpFd.append("user_id", getUser()?.id || 1);
+      const phpRes = await fetch(PHP_BASE + "/api/upload.php", {
+        method: "POST",
+        body: phpFd,
+      });
+      const phpData = await phpRes.json();
+      if (phpRes.ok && phpData.success) {
+        data.image_path = phpData.path;
+      }
+    } catch (phpErr) {
+      console.warn("Failed to persist image to backend:", phpErr);
+    }
+
     removeTyping();
     if (!res.ok) throw new Error(data.detail || "Could not analyze the image.");
     symptomImageAnalyses.push(data);
@@ -363,6 +381,9 @@ async function persistReport(report) {
     symptoms_listed: Array.isArray(report?.symptoms_listed)
       ? report.symptoms_listed
       : [primarySymptom, ...followupAnswers].filter(Boolean),
+    image_path: symptomImageAnalyses.length
+      ? symptomImageAnalyses[0].image_path || null
+      : null,
   };
 
   const saveRes = await fetch(PHP_BASE + "/api/reports.php", {
@@ -441,22 +462,26 @@ function renderReportPanel(r) {
   const symptoms = Array.isArray(r.symptoms_listed)
     ? r.symptoms_listed.map((s) => `<li>${escHtml(s)}</li>`).join("")
     : `<li>${escHtml(primarySymptom)}</li>`;
-  const imageSection = symptomImageAnalyses.length
+  const imgAnalysis =
+    r.image_analysis ||
+    (symptomImageAnalyses.length ? symptomImageAnalyses[0] : null);
+  const imageSection = imgAnalysis
     ? `
     <div class="report-section">
       <h4>Uploaded image review</h4>
-      ${symptomImageAnalyses
-        .map(
-          (item) => `
-        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="font-weight:500">${escHtml(item.image_type || "Symptom image")}</div>
-          <p>${escHtml((item.visible_observations || []).join(" ") || item.possible_relevance || "Image was included as supportive context.")}</p>
-          ${(item.red_flags || []).length ? `<p style="color:var(--red-danger);font-weight:500">Red flags: ${escHtml(item.red_flags.join(", "))}</p>` : ""}
-          <p class="text-muted">Confidence: ${escHtml(item.confidence || "low")}. Clinician review recommended.</p>
-        </div>
-      `,
-        )
-        .join("")}
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        ${
+          imgAnalysis.image_path
+            ? `
+          <img src="${PHP_BASE}/${imgAnalysis.image_path}" alt="Symptom Image" style="max-width:100%;max-height:250px;border-radius:8px;margin-bottom:12px;display:block;border:1px solid var(--border)">
+        `
+            : ""
+        }
+        <div style="font-weight:500">${escHtml(imgAnalysis.image_type || "Symptom image")}</div>
+        <p>${escHtml((imgAnalysis.visible_observations || []).join(" ") || imgAnalysis.possible_relevance || "Image was included as supportive context.")}</p>
+        ${(imgAnalysis.red_flags || []).length ? `<p style="color:var(--red-danger);font-weight:500">Red flags: ${escHtml(imgAnalysis.red_flags.join(", "))}</p>` : ""}
+        <p class="text-muted">Confidence: ${escHtml(imgAnalysis.confidence || "low")}. Clinician review recommended.</p>
+      </div>
     </div>
   `
     : "";

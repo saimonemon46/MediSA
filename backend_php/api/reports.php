@@ -13,6 +13,7 @@ function decodeReportData(array $reports): array {
     foreach ($reports as &$r) {
         $r['symptoms_listed'] = json_decode($r['symptoms_listed'] ?? '[]', true);
         $r['image_analysis'] = !empty($r['image_analysis']) ? json_decode($r['image_analysis'], true) : null;
+        $r['image_path'] = $r['image_path'] ?? null;
     }
     return $reports;
 }
@@ -49,14 +50,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $explanation = sanitize($data['explanation'] ?? '');
         $symptoms   = json_encode($data['symptoms_listed'] ?? []);
         $image_analysis = isset($data['image_analysis']) ? json_encode($data['image_analysis']) : null;
+        $image_path = sanitize($data['image_path'] ?? '');
 
         if (!$user_id || !$condition) {
             jsonResponse(['success' => false, 'message' => 'Missing required fields: user_id and possible_condition'], 400);
         }
 
         $stmt = $db->prepare('INSERT INTO triage_reports 
-            (user_id, session_id, possible_condition, urgency, recommended_specialist, reasoning, guidance, explanation, symptoms_listed, image_analysis, created_at) 
-            VALUES (?,?,?,?,?,?,?,?,?,?,NOW())');
+            (user_id, session_id, possible_condition, urgency, recommended_specialist, reasoning, guidance, explanation, symptoms_listed, image_analysis, image_path, created_at) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())');
         
         $stmt->execute([
             $user_id, 
@@ -68,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $guidance, 
             $explanation, 
             $symptoms, 
-            $image_analysis
+            $image_analysis,
+            $image_path
         ]);
 
         jsonResponse(['success' => true, 'report_id' => (int)$db->lastInsertId()]);
