@@ -68,19 +68,33 @@ def node_generate_questions(state: TriageState) -> TriageState:
     try:
         result = chat_json(FOLLOWUP_QUESTIONS_SYSTEM, prompt_user)
         questions = result.get("questions", [])
-        if not questions:
-            questions = [
-                f"How long have you been experiencing {state['primary_symptom']}?",
-                "On a scale of 1 to 10, how severe is the discomfort?",
-                "Do you have any other symptoms such as fever, nausea, or fatigue?"
-            ]
     except Exception as e:
+        print(f"Error generating AI questions: {e}")
+        questions = []
+    
+    if not questions:
+        # Check if the symptom suggests a visible issue
+        visible_keywords = ["infection", "rash", "wound", "cut", "burn", "swelling", "pus", "eye", "skin", "injury"]
+        is_visible = any(kw in state["primary_symptom"].lower() for kw in visible_keywords)
+        
         questions = [
             f"How long have you been experiencing {state['primary_symptom']}?",
-            "On a scale of 1 to 10, how severe is the discomfort?",
-            "Do you have any other symptoms such as fever, nausea, or fatigue?"
+            "On a scale of 1 to 10, how severe is the discomfort?"
         ]
-    state["followup_questions"] = questions
+        
+        if is_visible:
+            questions.append("Could you please upload a clear photo of the affected area if you haven't already?")
+            questions.append("Is there any discharge, pus, or spreading redness?")
+        else:
+            questions.append("Did this start suddenly or gradually?")
+            questions.append("Do you have any known allergies related to these symptoms?")
+            
+        questions.extend([
+            "Do you have any other symptoms such as fever, nausea, or fatigue?",
+            "Are you currently taking any medications for this or other conditions?"
+        ])
+    
+    state["followup_questions"] = questions[:6]  # Ensure exactly 6
     return state
 
 

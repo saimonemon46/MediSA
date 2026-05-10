@@ -37,26 +37,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-    $user_id   = (int)($data['user_id'] ?? 0);
-    $session_id = (int)($data['session_id'] ?? 0);
-    $condition  = sanitize($data['possible_condition'] ?? '');
-    $urgency    = sanitize($data['urgency'] ?? 'medium');
-    $specialist = sanitize($data['recommended_specialist'] ?? '');
-    $reasoning  = sanitize($data['reasoning'] ?? '');
-    $guidance   = sanitize($data['guidance'] ?? '');
-    $explanation = sanitize($data['explanation'] ?? '');
-    $symptoms   = json_encode($data['symptoms_listed'] ?? []);
-    $image_analysis = isset($data['image_analysis']) ? json_encode($data['image_analysis']) : null;
+    try {
+        $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $user_id   = (int)($data['user_id'] ?? 0);
+        $session_id = sanitize($data['session_id'] ?? '');
+        $condition  = sanitize($data['possible_condition'] ?? '');
+        $urgency    = sanitize($data['urgency'] ?? 'medium');
+        $specialist = sanitize($data['recommended_specialist'] ?? '');
+        $reasoning  = sanitize($data['reasoning'] ?? '');
+        $guidance   = sanitize($data['guidance'] ?? '');
+        $explanation = sanitize($data['explanation'] ?? '');
+        $symptoms   = json_encode($data['symptoms_listed'] ?? []);
+        $image_analysis = isset($data['image_analysis']) ? json_encode($data['image_analysis']) : null;
 
-    if (!$user_id || !$condition) { jsonResponse(['success'=>false,'message'=>'Missing required fields']); }
+        if (!$user_id || !$condition) {
+            jsonResponse(['success' => false, 'message' => 'Missing required fields: user_id and possible_condition'], 400);
+        }
 
-    $stmt = $db->prepare('INSERT INTO triage_reports
-        (user_id, session_id, possible_condition, urgency, recommended_specialist, reasoning, guidance, explanation, symptoms_listed, image_analysis, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,NOW())');
-    $stmt->execute([$user_id, $session_id ?: null, $condition, $urgency, $specialist, $reasoning, $guidance, $explanation, $symptoms, $image_analysis]);
+        $stmt = $db->prepare('INSERT INTO triage_reports 
+            (user_id, session_id, possible_condition, urgency, recommended_specialist, reasoning, guidance, explanation, symptoms_listed, image_analysis, created_at) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,NOW())');
+        
+        $stmt->execute([
+            $user_id, 
+            $session_id ?: null, 
+            $condition, 
+            $urgency, 
+            $specialist, 
+            $reasoning, 
+            $guidance, 
+            $explanation, 
+            $symptoms, 
+            $image_analysis
+        ]);
 
-    jsonResponse(['success'=>true, 'report_id'=>(int)$db->lastInsertId()]);
+        jsonResponse(['success' => true, 'report_id' => (int)$db->lastInsertId()]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {

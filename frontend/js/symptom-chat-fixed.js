@@ -4,7 +4,7 @@
 // ============================================================
 
 const AI_BASE = "http://localhost:8000";
-const PHP_BASE = "http://localhost/backend_php";
+const PHP_BASE = "../../backend_php";
 
 let sessionId = null;
 let stage = "initial"; // initial | followup | analysis | done
@@ -370,8 +370,13 @@ async function persistReport(report) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (!saveRes.ok) {
+    throw new Error(
+      `Failed to save report: ${saveRes.status} ${saveRes.statusText}`,
+    );
+  }
   const saveData = await saveRes.json();
-  if (!saveRes.ok || !saveData.success) {
+  if (!saveData.success) {
     throw new Error(saveData.message || "Failed to save report.");
   }
   return saveData;
