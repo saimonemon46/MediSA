@@ -31,7 +31,7 @@ async def generate_questions(req: SymptomRequest):
 async def generate_report(req: ReportRequest):
     """
     Step 2 of the triage pipeline.
-    Accepts session ID, symptom, and user answers.
+    Accepts session ID, symptom, user answers, and optional image analysis.
     Runs full triage analysis via LangGraph and returns the report.
     """
     if not req.symptom.strip():
@@ -41,7 +41,8 @@ async def generate_report(req: ReportRequest):
             session_id=req.session_id,
             symptom=req.symptom,
             answers=req.answers,
-            user_id=req.user_id
+            user_id=req.user_id,
+            image_analysis=req.image_analysis
         )
         return result
     except Exception as e:

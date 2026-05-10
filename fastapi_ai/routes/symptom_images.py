@@ -161,3 +161,37 @@ async def analyze_symptom_image(file: UploadFile = File(...)):
         result = _fallback_analysis(file.filename or "symptom-image", file.content_type or "")
 
     return _normalise_result(result)
+
+
+@router.post("/analyze-symptom-image-for-triage")
+async def analyze_symptom_image_for_triage(file: UploadFile = File(...)):
+    """
+    Analyzes a symptom image in the context of medical triage assessment.
+    Returns structured analysis to be included in triage reports and assessment recommendations.
+    """
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, or WEBP symptom images are supported.")
+
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded image is empty.")
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=400, detail="Image is too large. Maximum size is 8MB.")
+
+    result = {}
+    if GEMINI_API_KEY:
+        try:
+            result = await _analyze_with_gemini(image_bytes, file.content_type or "image/jpeg")
+        except Exception:
+            result = {}
+
+    if not result:
+        result = _fallback_analysis(file.filename or "symptom-image", file.content_type or "")
+
+    # Enhanced response for triage context
+    normalized = _normalise_result(result)
+    return {
+        **normalized,
+        "analysis_context": "triage",
+        "assessment_flag": "red" if normalized.get("red_flags") else ("yellow" if "needs_clinician_review" in result else "green")
+    }

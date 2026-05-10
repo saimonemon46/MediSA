@@ -21,6 +21,7 @@ class ReportRequest(BaseModel):
     symptom: str
     answers: List[str] = []
     user_id: int
+    image_analysis: Optional[Dict[str, Any]] = None
 
 
 class DocumentAnalysisRequest(BaseModel):

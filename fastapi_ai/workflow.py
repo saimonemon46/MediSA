@@ -35,6 +35,7 @@ class TriageState(TypedDict):
     primary_symptom: str
     followup_questions: List[str]
     user_answers: List[str]
+    image_analysis: Optional[dict]
     retrieved_context: str
     triage_result: dict
     explanation: str
@@ -92,7 +93,7 @@ def node_process_answers(state: TriageState) -> TriageState:
 
 
 def node_triage_engine(state: TriageState) -> TriageState:
-    """Run triage analysis using LLM + enriched RAG context."""
+    """Run triage analysis using LLM + enriched RAG context + image analysis."""
     answers_text = "\n".join(
         f"Q{i+1}: {q}\nA: {a}"
         for i, (q, a) in enumerate(zip(
@@ -100,12 +101,28 @@ def node_triage_engine(state: TriageState) -> TriageState:
             state.get("user_answers", [])
         ))
     ) or "No follow-up answers provided."
+    
+    # Include image analysis data if available
+    image_context = ""
+    if state.get("image_analysis"):
+        image_data = state["image_analysis"]
+        image_context = f"""
+Image Analysis Results (for contextual support):
+- Image Type: {image_data.get('image_type', 'Unknown')}
+- Visible Observations: {', '.join(image_data.get('visible_observations', []))}
+- Possible Relevance: {image_data.get('possible_relevance', 'N/A')}
+- Red Flags Noted: {', '.join(image_data.get('red_flags', [])) if image_data.get('red_flags') else 'None'}
+- Image Quality: {image_data.get('image_quality', 'Unknown')}
+- Confidence: {image_data.get('confidence', 'Low')}
+- Disclaimer: Image analysis is supportive only and cannot diagnose a condition. Professional medical evaluation required.
+"""
+        answers_text += image_context
+    
     if state.get("user_answers"):
         image_answers = [a for a in state["user_answers"] if "Uploaded image observations:" in a]
         if image_answers:
             answers_text += (
-                "\n\nImage context note: Uploaded image observations are supportive triage context only, "
-                "not a definitive visual diagnosis.\n" + "\n".join(image_answers)
+                "\n\nAdditional user-provided image context:\n" + "\n".join(image_answers)
             )
 
     prompt_user = TRIAGE_ANALYSIS_USER.format(
@@ -167,6 +184,7 @@ def node_generate_report(state: TriageState) -> TriageState:
         "guidance":              r.get("guidance", ""),
         "symptoms_listed":       r.get("symptoms_listed", [state["primary_symptom"]]),
         "explanation":           state.get("explanation", ""),
+        "image_analysis":        state.get("image_analysis"),
         "generated_at":          datetime.utcnow().isoformat() + "Z",
     }
     return state
@@ -250,14 +268,15 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
     }
 
 
-def run_report_generation(session_id: str, symptom: str, answers: list, user_id: int) -> dict:
-    """Run the full triage analysis and report generation phase."""
+def run_report_generation(session_id: str, symptom: str, answers: list, user_id: int, image_analysis: dict = None) -> dict:
+    """Run the full triage analysis and report generation phase with optional image analysis."""
     state: TriageState = {
         "session_id":          session_id,
         "user_id":             user_id,
         "primary_symptom":     symptom,
         "followup_questions":  [],
         "user_answers":        answers,
+        "image_analysis":      image_analysis,
         "retrieved_context":   "",
         "triage_result":       {},
         "explanation":         "",
