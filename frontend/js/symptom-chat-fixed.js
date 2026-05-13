@@ -284,13 +284,20 @@ async function startSession(symptomText) {
       throw new Error(data.detail || "Failed to start the symptom session.");
 
     removeTyping();
+    
+    if (data.is_medical === false) {
+      addMessage(data.intent_message || "I'm here to help with health concerns. Please describe any symptoms you're experiencing.", "ai");
+      setStage("initial");
+      setSendDisabled(false);
+      return;
+    }
+
     sessionId = data.session_id;
     document.getElementById("sessionId").textContent = "#" + sessionId;
 
     if (data.questions && data.questions.length > 0) {
-      const intro =
-        "Thank you. To give you a better assessment, I have a few questions:\n\n" +
-        data.questions[0];
+      const intro = (data.intent_message || "Thank you. To give you a better assessment, I have a few questions:") + 
+        "\n\n" + data.questions[0];
       addMessage(intro, "ai");
       window._questions = data.questions;
       window._qIdx = 0;

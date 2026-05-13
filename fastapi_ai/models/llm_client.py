@@ -12,7 +12,7 @@ load_dotenv()  # loads .env
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL = "llama3-70b-8192"   # Groq's fast 70B model
+MODEL = "openai/gpt-oss-120b"   # Groq's fast 70B model
 GEMINI_MODEL = "gemini-1.5-flash"
 
 _groq_client = None

@@ -25,6 +25,7 @@ from fastapi_ai.prompts.templates import (
     FOLLOWUP_QUESTIONS_SYSTEM, FOLLOWUP_QUESTIONS_USER,
     TRIAGE_ANALYSIS_SYSTEM, TRIAGE_ANALYSIS_USER,
     EXPLANATION_SYSTEM, EXPLANATION_USER,
+    INTENT_DETECTION_SYSTEM, INTENT_DETECTION_USER,
     )
 
 
@@ -42,9 +43,26 @@ class TriageState(TypedDict):
     explanation: str
     report: dict
     error: Optional[str]
+    is_medical: bool
+    intent_message: str
 
 
 # ---- Node functions ----
+
+def node_intent_detection(state: TriageState) -> TriageState:
+    """Determine if the user message is a medical symptom or not."""
+    prompt_user = INTENT_DETECTION_USER.format(text=state["primary_symptom"])
+    try:
+        result = chat_json(INTENT_DETECTION_SYSTEM, prompt_user)
+        state["is_medical"] = result.get("is_medical", True)
+        state["intent_message"] = result.get("message", "")
+    except Exception as e:
+        print(f"Error in intent detection: {e}")
+        state["is_medical"] = True  # Default to True on error to avoid blocking valid queries
+        state["intent_message"] = ""
+    return state
+
+
 
 def node_rag_retrieval(state: TriageState) -> TriageState:
     """Retrieve relevant medical knowledge from vector store."""
@@ -222,6 +240,7 @@ def build_graph():
 
     graph = StateGraph(TriageState)
 
+    graph.add_node("intent_detection",      node_intent_detection)
     graph.add_node("rag_retrieval",         node_rag_retrieval)
     graph.add_node("generate_questions",    node_generate_questions)
     graph.add_node("process_answers",       node_process_answers)
@@ -229,7 +248,23 @@ def build_graph():
     graph.add_node("generate_explanation",  node_generate_explanation)
     graph.add_node("generate_report",       node_generate_report)
 
-    graph.set_entry_point("rag_retrieval")
+    graph.set_entry_point("intent_detection")
+    
+    # Conditional edge: if medical, go to RAG; else END
+    def route_after_intent(state: TriageState):
+        if state.get("is_medical", True):
+            return "rag_retrieval"
+        return END
+
+    graph.add_conditional_edges(
+        "intent_detection",
+        route_after_intent,
+        {
+            "rag_retrieval": "rag_retrieval",
+            END: END
+        }
+    )
+    
     graph.add_edge("rag_retrieval",        "generate_questions")
     graph.add_edge("generate_questions",   END)          # pause — wait for user answers
 
@@ -275,6 +310,8 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
         "explanation":         "",
         "report":              {},
         "error":               None,
+        "is_medical":          True,
+        "intent_message":      "",
     }
 
     graph = build_graph()
@@ -282,13 +319,17 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
         final_state = graph.invoke(state)
     else:
         # Manual execution when LangGraph not available
-        state = node_rag_retrieval(state)
-        state = node_generate_questions(state)
+        state = node_intent_detection(state)
+        if state.get("is_medical", True):
+            state = node_rag_retrieval(state)
+            state = node_generate_questions(state)
         final_state = state
 
     return {
-        "session_id": final_state["session_id"],
-        "questions":  final_state["followup_questions"],
+        "session_id":     final_state["session_id"],
+        "questions":      final_state["followup_questions"],
+        "is_medical":     final_state.get("is_medical", True),
+        "intent_message": final_state.get("intent_message", ""),
     }
 
 
