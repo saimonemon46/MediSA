@@ -26,6 +26,8 @@ from fastapi_ai.prompts.templates import (
     TRIAGE_ANALYSIS_SYSTEM, TRIAGE_ANALYSIS_USER,
     EXPLANATION_SYSTEM, EXPLANATION_USER,
     INTENT_DETECTION_SYSTEM, INTENT_DETECTION_USER,
+    INPUT_ANALYSIS_SYSTEM, DYNAMIC_REASONING_SYSTEM,
+    CONVERSATIONAL_TURN_SYSTEM,
     )
 
 
@@ -47,25 +49,78 @@ class TriageState(TypedDict):
     intent_message: str
     user_concern: str
     acknowledgment: str
+    chat_history: List[dict]  # list of {"role": "user/ai", "content": "..."}
+    internal_reasoning: str
+    current_question: str
+    is_complete: bool
+    validation_error: Optional[str]
 
 
 # ---- Node functions ----
 
-def node_intent_detection(state: TriageState) -> TriageState:
-    """Determine if the user message is a medical symptom or not."""
-    prompt_user = INTENT_DETECTION_USER.format(text=state["primary_symptom"])
+def node_input_analysis(state: TriageState) -> TriageState:
+    """V2: Analyze the user's input for intent and validity."""
+    latest_user_msg = state["chat_history"][-1]["content"] if state["chat_history"] else state["primary_symptom"]
+    
+    context = f"Last Question Asked: {state.get('current_question', 'N/A')}\nUser Message: {latest_user_msg}"
+    prompt_user = f"Context:\n{context}"
+    
     try:
-        result = chat_json(INTENT_DETECTION_SYSTEM, prompt_user)
+        result = chat_json(INPUT_ANALYSIS_SYSTEM, prompt_user)
         state["is_medical"] = result.get("is_medical", True)
-        state["intent_message"] = result.get("message", "")
-        state["user_concern"] = result.get("user_concern", "")
-        state["acknowledgment"] = result.get("acknowledgment", "")
+        state["validation_error"] = result.get("validation_error") if not result.get("is_valid") else None
+        
+        # If it's a new medical concern, update the primary symptom
+        if result.get("intent") == "MEDICAL_CONCERN":
+            state["primary_symptom"] = result.get("primary_symptom", latest_user_msg)
+            
+        # Update state with extracted tone/intent if needed
     except Exception as e:
-        print(f"Error in intent detection: {e}")
+        print(f"Error in input analysis: {e}")
         state["is_medical"] = True
-        state["intent_message"] = ""
-        state["user_concern"] = ""
-        state["acknowledgment"] = ""
+        state["validation_error"] = None
+    return state
+
+
+def node_dynamic_reasoning(state: TriageState) -> TriageState:
+    """V2: Update internal understanding and decide next steps."""
+    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in state["chat_history"]])
+    rag_context = state.get("retrieved_context", "")
+    
+    prompt_user = f"Conversation History:\n{history_text}\n\nMedical Context:\n{rag_context}"
+    
+    try:
+        result = chat_json(DYNAMIC_REASONING_SYSTEM, prompt_user)
+        state["internal_reasoning"] = result.get("internal_reasoning", "")
+        state["is_complete"] = result.get("is_complete", False)
+        # We can store next_best_question_focus for the next node
+        state["current_question"] = result.get("next_best_question_focus", "") 
+    except Exception as e:
+        print(f"Error in dynamic reasoning: {e}")
+        state["is_complete"] = len(state.get("user_answers", [])) >= 6
+    return state
+
+
+def node_conversational_turn(state: TriageState) -> TriageState:
+    """V2: Generate the empathetic conversational response."""
+    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in state["chat_history"]])
+    
+    # If there was a validation error, we need to ask for clarification
+    if state.get("validation_error"):
+        prompt_user = f"History:\n{history_text}\n\nValidation Error: {state['validation_error']}\n\nTask: Politely ask for clarification regarding the error."
+    else:
+        prompt_user = f"History:\n{history_text}\n\nInternal Reasoning: {state.get('internal_reasoning', '')}\n\nFocus: {state.get('current_question', '')}"
+    
+    try:
+        result = chat_json(CONVERSATIONAL_TURN_SYSTEM, prompt_user)
+        state["intent_message"] = result.get("message", "")
+        state["current_question"] = result.get("current_question", "")
+        
+        # Add to history
+        state["chat_history"].append({"role": "ai", "content": state["intent_message"]})
+    except Exception as e:
+        print(f"Error in conversational turn: {e}")
+        state["intent_message"] = "I'm sorry, I'm having trouble processing that. Could you tell me more about your symptoms?"
     return state
 
 
@@ -125,22 +180,30 @@ def node_generate_questions(state: TriageState) -> TriageState:
 
 
 def node_process_answers(state: TriageState) -> TriageState:
-    """Re-retrieve context enriched by user answers."""
-    enriched_query = state["primary_symptom"] + " " + " ".join(state.get("user_answers", []))
-    docs = retrieve(enriched_query, top_k=8)
+    """Re-retrieve context enriched by user answers and conversation history."""
+    query = state["primary_symptom"]
+    if state.get("chat_history"):
+        query += " " + " ".join([m["content"] for m in state["chat_history"] if m["role"] == "user"])
+    elif state.get("user_answers"):
+        query += " " + " ".join(state["user_answers"])
+    
+    docs = retrieve(query, top_k=8)
     state["retrieved_context"] = format_context(docs)
     return state
 
 
 def node_triage_engine(state: TriageState) -> TriageState:
-    """Run triage analysis using LLM + enriched RAG context + image analysis."""
-    answers_text = "\n".join(
-        f"Q{i+1}: {q}\nA: {a}"
-        for i, (q, a) in enumerate(zip(
-            state.get("followup_questions", []),
-            state.get("user_answers", [])
-        ))
-    ) or "No follow-up answers provided."
+    """Run triage analysis using LLM + enriched RAG context + conversation history."""
+    if state.get("chat_history"):
+        answers_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in state["chat_history"]])
+    else:
+        answers_text = "\n".join(
+            f"Q{i+1}: {q}\nA: {a}"
+            for i, (q, a) in enumerate(zip(
+                state.get("followup_questions", []),
+                state.get("user_answers", [])
+            ))
+        ) or "No follow-up answers provided."
     
     # Include image analysis data if available
     image_context = ""
@@ -247,33 +310,30 @@ def build_graph():
 
     graph = StateGraph(TriageState)
 
-    graph.add_node("intent_detection",      node_intent_detection)
+    graph.add_node("input_analysis",        node_input_analysis)
     graph.add_node("rag_retrieval",         node_rag_retrieval)
-    graph.add_node("generate_questions",    node_generate_questions)
-    graph.add_node("process_answers",       node_process_answers)
-    graph.add_node("triage_engine",         node_triage_engine)
-    graph.add_node("generate_explanation",  node_generate_explanation)
-    graph.add_node("generate_report",       node_generate_report)
+    graph.add_node("dynamic_reasoning",     node_dynamic_reasoning)
+    graph.add_node("conversational_turn",   node_conversational_turn)
 
-    graph.set_entry_point("intent_detection")
+    graph.set_entry_point("input_analysis")
     
-    # Conditional edge: if medical, go to RAG; else END
-    def route_after_intent(state: TriageState):
-        if state.get("is_medical", True):
-            return "rag_retrieval"
-        return END
+    def route_after_input(state: TriageState):
+        if not state.get("is_medical", True):
+            return "conversational_turn"
+        return "rag_retrieval"
 
     graph.add_conditional_edges(
-        "intent_detection",
-        route_after_intent,
+        "input_analysis",
+        route_after_input,
         {
-            "rag_retrieval": "rag_retrieval",
-            END: END
+            "conversational_turn": "conversational_turn",
+            "rag_retrieval": "rag_retrieval"
         }
     )
     
-    graph.add_edge("rag_retrieval",        "generate_questions")
-    graph.add_edge("generate_questions",   END)          # pause — wait for user answers
+    graph.add_edge("rag_retrieval",        "dynamic_reasoning")
+    graph.add_edge("dynamic_reasoning",    "conversational_turn")
+    graph.add_edge("conversational_turn",  END)
 
     return graph.compile()
 
@@ -301,15 +361,24 @@ def build_report_graph():
 
 # ---- High-level API functions ----
 
-def run_question_generation(symptom: str, user_id: int, session_id: str = None) -> dict:
-    """Run the question generation phase of the pipeline."""
-    if session_id is None:
-        session_id = str(uuid.uuid4())[:8].upper()
-
+def run_conversational_step(
+    session_id: str,
+    message: str,
+    user_id: int,
+    chat_history: List[dict] = None
+) -> dict:
+    """V2: Run a single turn of the conversational triage."""
+    if chat_history is None:
+        chat_history = []
+    
+    # Add latest user message to history
+    chat_history.append({"role": "user", "content": message})
+    
     state: TriageState = {
         "session_id":          session_id,
         "user_id":             user_id,
-        "primary_symptom":     symptom,
+        "primary_symptom":     message, # Fallback
+        "chat_history":        chat_history,
         "followup_questions":  [],
         "user_answers":        [],
         "retrieved_context":   "",
@@ -321,30 +390,45 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
         "intent_message":      "",
         "user_concern":        "",
         "acknowledgment":      "",
+        "internal_reasoning":  "",
+        "current_question":    "", # We might want to pass this in from the session
+        "is_complete":         False,
+        "validation_error":    None,
     }
 
     graph = build_graph()
     if graph:
         final_state = graph.invoke(state)
     else:
-        # Manual execution when LangGraph not available
-        state = node_intent_detection(state)
+        # Manual execution fallback
+        state = node_input_analysis(state)
         if state.get("is_medical", True):
             state = node_rag_retrieval(state)
-            state = node_generate_questions(state)
+            state = node_dynamic_reasoning(state)
+        state = node_conversational_turn(state)
         final_state = state
 
     return {
         "session_id":     final_state["session_id"],
-        "questions":      final_state["followup_questions"],
+        "message":        final_state["intent_message"],
         "is_medical":     final_state.get("is_medical", True),
-        "intent_message": final_state.get("intent_message", ""),
-        "user_concern":   final_state.get("user_concern", ""),
-        "acknowledgment": final_state.get("acknowledgment", ""),
+        "is_complete":    final_state.get("is_complete", False),
+        "chat_history":   final_state["chat_history"],
+        "internal_reasoning": final_state.get("internal_reasoning", ""),
     }
 
 
-def run_report_generation(session_id: str, symptom: str, answers: list, user_id: int, image_analysis: dict = None) -> dict:
+def run_question_generation(symptom: str, user_id: int, session_id: str = None) -> dict:
+    """Legacy/initial step: starts the conversation."""
+    return run_conversational_step(
+        session_id=session_id or str(uuid.uuid4())[:8].upper(),
+        message=symptom,
+        user_id=user_id,
+        chat_history=[]
+    )
+
+
+def run_report_generation(session_id: str, symptom: str, answers: list, user_id: int, image_analysis: dict = None, chat_history: list = None) -> dict:
     """Run the full triage analysis and report generation phase with optional image analysis."""
     state: TriageState = {
         "session_id":          session_id,
@@ -352,6 +436,7 @@ def run_report_generation(session_id: str, symptom: str, answers: list, user_id:
         "primary_symptom":     symptom,
         "followup_questions":  [],
         "user_answers":        answers,
+        "chat_history":        chat_history or [],
         "image_analysis":      image_analysis,
         "retrieved_context":   "",
         "triage_result":       {},

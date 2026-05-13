@@ -14,6 +14,7 @@ let currentReport = null;
 let selectedImageFile = null;
 let selectedImageUrl = "";
 let symptomImageAnalyses = [];
+let chatHistory = []; // stores [{"role": "user/ai", "content": "..."}]
 
 function getUser() {
   try {
@@ -262,7 +263,6 @@ async function sendMessage() {
     await startSession(primarySymptom);
   } else if (stage === "followup") {
     const answer = [text, imageAnswer].filter(Boolean).join("\n\n");
-    followupAnswers.push(answer);
     await submitAnswer(answer);
   }
 }
@@ -285,36 +285,27 @@ async function startSession(symptomText) {
 
     removeTyping();
     
+    sessionId = data.session_id;
+    chatHistory = data.chat_history || [];
+    document.getElementById("sessionId").textContent = "#" + sessionId;
+
     if (data.is_medical === false) {
-      addMessage(data.intent_message || "I'm here to help with health concerns. Please describe any symptoms you're experiencing.", "ai");
+      addMessage(data.message || "I'm here to help with health concerns. Please describe any symptoms you're experiencing.", "ai");
       setStage("initial");
       setSendDisabled(false);
       return;
     }
 
-    sessionId = data.session_id;
-    document.getElementById("sessionId").textContent = "#" + sessionId;
-
-    if (data.questions && data.questions.length > 0) {
-      // Use the warm acknowledgment from intent detection + the first conversational question
-      const intro = (data.acknowledgment || data.intent_message || "I'm sorry to hear that. Let me ask a few more questions to understand better.") + 
-        "\n\n" + data.questions[0];
-      addMessage(intro, "ai");
-      window._questions = data.questions;
-      window._qIdx = 0;
-    } else {
-      // If medical intent was detected but no questions were generated, ask for more detail
-      // instead of jumping straight to a report which might be empty/undetermined.
-      const msg = data.intent_message || "I need a bit more detail about your symptoms to provide a helpful assessment. Could you describe what you're feeling in more detail?";
-      addMessage(msg, "ai");
-      setStage("initial"); // Allow them to keep typing in initial stage
-      setSendDisabled(false);
+    addMessage(data.message, "ai");
+    
+    if (data.is_complete) {
+      setStage("analysis");
+      await generateReport();
     }
   } catch (err) {
     removeTyping();
     addMessage(
-      err?.message ||
-        "I could not start the symptom session. Please try again.",
+      err?.message || "I could not start the symptom session. Please try again.",
       "ai",
     );
   }
@@ -322,20 +313,42 @@ async function startSession(symptomText) {
 }
 
 async function submitAnswer(answer) {
-  window._qIdx = (window._qIdx || 0) + 1;
-  const questions = window._questions || [];
+  addTyping();
+  try {
+    const res = await fetch(AI_BASE + "/process-message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        message: answer,
+        user_id: getUser()?.id || 1,
+        chat_history: chatHistory,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to process message.");
 
-  if (window._qIdx < questions.length) {
-    addMessage(questions[window._qIdx], "ai");
-    setSendDisabled(false);
-  } else {
-    setStage("analysis");
+    removeTyping();
+    chatHistory = data.chat_history || [];
+    
+    addMessage(data.message, "ai");
+
+    if (data.is_complete) {
+      setStage("analysis");
+      addMessage(
+        "Thank you for your cooperation. Analysing all the information we've gathered...",
+        "ai",
+      );
+      await generateReport();
+    }
+  } catch (err) {
+    removeTyping();
     addMessage(
-      "Thank you for your answers. Analysing your symptoms now...",
+      err?.message || "I had trouble understanding that. Could you try again?",
       "ai",
     );
-    await generateReport();
   }
+  setSendDisabled(false);
 }
 
 async function generateReport() {
@@ -349,7 +362,8 @@ async function generateReport() {
       body: JSON.stringify({
         session_id: sessionId,
         symptom: primarySymptom,
-        answers: followupAnswers,
+        answers: chatHistory.filter(m => m.role === "user").map(m => m.content),
+        chat_history: chatHistory,
         user_id: getUser()?.id || 1,
         image_analysis: symptomImageAnalyses.length
           ? symptomImageAnalyses[0]

@@ -9,11 +9,11 @@ class SymptomRequest(BaseModel):
     user_id: int = Field(..., description="User ID from PHP backend")
 
 
-class AnswerSubmission(BaseModel):
+class ConversationalRequest(BaseModel):
     session_id: str
-    symptom: str
-    answers: List[str] = []
+    message: str
     user_id: int
+    chat_history: List[Dict[str, str]] = []
 
 
 class ReportRequest(BaseModel):
@@ -21,6 +21,7 @@ class ReportRequest(BaseModel):
     symptom: str
     answers: List[str] = []
     user_id: int
+    chat_history: List[Dict[str, str]] = []
     image_analysis: Optional[Dict[str, Any]] = None
 
 
