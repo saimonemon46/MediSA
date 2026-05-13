@@ -45,6 +45,8 @@ class TriageState(TypedDict):
     error: Optional[str]
     is_medical: bool
     intent_message: str
+    user_concern: str
+    acknowledgment: str
 
 
 # ---- Node functions ----
@@ -56,10 +58,14 @@ def node_intent_detection(state: TriageState) -> TriageState:
         result = chat_json(INTENT_DETECTION_SYSTEM, prompt_user)
         state["is_medical"] = result.get("is_medical", True)
         state["intent_message"] = result.get("message", "")
+        state["user_concern"] = result.get("user_concern", "")
+        state["acknowledgment"] = result.get("acknowledgment", "")
     except Exception as e:
         print(f"Error in intent detection: {e}")
-        state["is_medical"] = True  # Default to True on error to avoid blocking valid queries
+        state["is_medical"] = True
         state["intent_message"] = ""
+        state["user_concern"] = ""
+        state["acknowledgment"] = ""
     return state
 
 
@@ -81,6 +87,7 @@ def node_generate_questions(state: TriageState) -> TriageState:
         "include one question asking the user to upload a clear photo of the affected area if they feel comfortable."
     )
     prompt_user = FOLLOWUP_QUESTIONS_USER.format(
+        concern=state.get("user_concern", ""),
         symptom=state["primary_symptom"] + image_hint,
         context=state["retrieved_context"]
     )
@@ -312,6 +319,8 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
         "error":               None,
         "is_medical":          True,
         "intent_message":      "",
+        "user_concern":        "",
+        "acknowledgment":      "",
     }
 
     graph = build_graph()
@@ -330,6 +339,8 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
         "questions":      final_state["followup_questions"],
         "is_medical":     final_state.get("is_medical", True),
         "intent_message": final_state.get("intent_message", ""),
+        "user_concern":   final_state.get("user_concern", ""),
+        "acknowledgment": final_state.get("acknowledgment", ""),
     }
 
 

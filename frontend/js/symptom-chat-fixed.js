@@ -296,7 +296,8 @@ async function startSession(symptomText) {
     document.getElementById("sessionId").textContent = "#" + sessionId;
 
     if (data.questions && data.questions.length > 0) {
-      const intro = (data.intent_message || "Thank you. To give you a better assessment, I have a few questions:") + 
+      // Use the warm acknowledgment from intent detection + the first conversational question
+      const intro = (data.acknowledgment || data.intent_message || "I'm sorry to hear that. Let me ask a few more questions to understand better.") + 
         "\n\n" + data.questions[0];
       addMessage(intro, "ai");
       window._questions = data.questions;
