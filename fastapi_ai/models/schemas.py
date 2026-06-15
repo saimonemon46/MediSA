@@ -14,6 +14,7 @@ class ConversationalRequest(BaseModel):
     message: str
     user_id: int
     chat_history: List[Dict[str, str]] = []
+    patient_state: Optional[Dict[str, Any]] = None  # NEW: patient state
 
 
 class ReportRequest(BaseModel):
@@ -23,6 +24,7 @@ class ReportRequest(BaseModel):
     user_id: int
     chat_history: List[Dict[str, str]] = []
     image_analysis: Optional[Dict[str, Any]] = None
+    patient_state: Optional[Dict[str, Any]] = None  # NEW: patient state
 
 
 class DocumentAnalysisRequest(BaseModel):
@@ -60,6 +62,10 @@ class TriageReport(BaseModel):
     guidance: str
     symptoms_listed: List[str] = []
     generated_at: str
+    # NEW: differential diagnoses
+    differential_diagnoses: Optional[List[Dict[str, Any]]] = None
+    # NEW: conversation summary
+    conversation_summary: Optional[Dict[str, Any]] = None
 
 
 class QuestionResponse(BaseModel):
@@ -80,3 +86,50 @@ class DocumentAnalysisResult(BaseModel):
     recommended_specialist: Optional[str] = ""
     notes: Optional[str] = ""
     raw_text: Optional[str] = ""
+
+
+# NEW: Diagnostic result model
+class DifferentialDiagnosis(BaseModel):
+    rank: int
+    condition: str
+    confidence: float  # 0.0 to 1.0
+    likelihood_category: str  # "high", "moderate", "low"
+    supporting_evidence: List[str]
+    contradicting_evidence: Optional[List[str]] = []
+    requires_emergency: bool = False
+    reasoning: str
+
+
+class EnhancedTriageReport(BaseModel):
+    """Extended report format with differential diagnosis and summaries."""
+    session_id: str
+    user_id: int
+    
+    # Basic triage info
+    possible_condition: str
+    urgency: str
+    recommended_specialist: str
+    
+    # NEW: Differential diagnosis
+    differential_diagnoses: List[DifferentialDiagnosis]
+    overall_diagnosis_confidence: float
+    
+    # Evidence and reasoning
+    reasoning: str
+    guidance: str
+    
+    # NEW: Conversation summary
+    conversation_summary: Optional[str]
+    chief_complaint: Optional[str]
+    symptoms_present: List[str]
+    symptoms_absent: Optional[List[str]] = []
+    risk_factors: Optional[List[str]] = []
+    
+    # Emergency assessment
+    requires_emergency_referral: bool = False
+    emergency_flags: Optional[List[str]] = []
+    
+    # Metadata
+    generated_at: str
+    image_analysis: Optional[Dict[str, Any]] = None
+

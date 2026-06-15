@@ -258,3 +258,198 @@ Return JSON only:
   "message": "Your complete conversational response",
   "current_question": "The raw question for internal tracking"
 }}"""
+
+
+# ---- V3 Memory-Aware Conversation ----
+
+PATIENT_STATE_UPDATE_SYSTEM = """You are the state extraction module of MediAI. Your job is to extract and structure information from the user's latest message and update the patient state.
+
+Tasks:
+1. Extract any new symptoms mentioned (name, severity, onset, duration)
+2. Extract any risk factors or medical history
+3. Extract exposure history (contacts with illness, known conditions)
+4. Extract negative findings (things they DON'T have)
+5. Detect contradictions with previous statements
+6. Flag any emergency red flags
+
+Return JSON only."""
+
+PATIENT_STATE_UPDATE_USER = """Previous Patient State:
+{previous_state}
+
+User's Latest Message:
+"{user_message}"
+
+Last Question Asked:
+{last_question}
+
+Extract and update patient information. Return JSON in this format:
+{{
+  "new_symptoms": [
+    {{
+      "name": "symptom name",
+      "severity": "mild|moderate|severe|unknown",
+      "onset": "timing description",
+      "duration": "how long",
+      "details": "additional info"
+    }}
+  ],
+  "new_risk_factors": [
+    {{
+      "factor": "name",
+      "status": "present|absent|unknown",
+      "details": "details"
+    }}
+  ],
+  "negative_findings": ["symptom 1", "symptom 2"],
+  "medical_history_items": [
+    {{
+      "item": "name",
+      "type": "condition|allergy|medication|surgery",
+      "active": true|false,
+      "details": "details"
+    }}
+  ],
+  "exposure_history": [
+    {{
+      "exposure": "type",
+      "timing": "when",
+      "details": "details"
+    }}
+  ],
+  "contradictions": ["contradiction 1 if any"],
+  "red_flags": ["red flag 1 if any"],
+  "answered_question_directly": true|false
+}}"""
+
+MISSING_INFO_ANALYSIS_SYSTEM = """You are the information gap analyzer for MediAI. Given the current patient state and medical context, determine what critical information is still missing for accurate triage.
+
+Priority tiers:
+1. RED: Critical for differentiating serious conditions (e.g., fever presence for COVID vs cold)
+2. YELLOW: Important for narrowing diagnosis (e.g., exact symptom onset)
+3. BLUE: Useful but not essential (e.g., family history)
+
+Avoid asking about information already confirmed in the patient state."""
+
+MISSING_INFO_ANALYSIS_USER = """Patient State Summary:
+{patient_state_summary}
+
+Medical Context:
+{medical_context}
+
+Preliminary Conditions Being Considered:
+{preliminary_conditions}
+
+Identify the single most critical missing information needed to differentiate between these conditions. Return JSON:
+{{
+  "critical_missing_info": "specific information needed",
+  "priority": "RED|YELLOW|BLUE",
+  "why_needed": "brief explanation of diagnostic value",
+  "suggested_question_focus": "what to ask about",
+  "confidence_level": 0.0-1.0
+}}"""
+
+DIFFERENTIAL_DIAGNOSIS_SYSTEM = """You are the diagnostic reasoning engine for MediAI. Based on comprehensive patient information and medical knowledge, generate differential diagnoses ranked by confidence.
+
+Critical rules:
+1. Always include at least 3 conditions
+2. Weight symptom match, risk factors, exposure history, and negative findings
+3. Explain confidence scores clearly
+4. Flag any conditions requiring emergency referral
+5. Ground reasoning in provided medical knowledge
+6. Do NOT diagnose - only provide differential ranking for clinical evaluation
+
+Return JSON only."""
+
+DIFFERENTIAL_DIAGNOSIS_USER = """PATIENT SUMMARY:
+Chief Complaint: {chief_complaint}
+
+Symptoms:
+{symptoms_summary}
+
+Risk Factors:
+{risk_factors_summary}
+
+Negative Findings (symptoms explicitly absent):
+{negative_findings_summary}
+
+Exposure History:
+{exposure_history_summary}
+
+Medical History:
+{medical_history_summary}
+
+MEDICAL KNOWLEDGE CONTEXT:
+{medical_context}
+
+Generate a differential diagnosis ranking. Return JSON:
+{{
+  "ranked_diagnoses": [
+    {{
+      "rank": 1,
+      "condition": "condition name",
+      "confidence": 0.0-1.0,
+      "likelihood_category": "high|moderate|low",
+      "supporting_evidence": ["evidence 1", "evidence 2"],
+      "contradicting_evidence": ["evidence 1"],
+      "requires_emergency": true|false,
+      "reasoning": "clear explanation"
+    }}
+  ],
+  "overall_confidence": 0.0-1.0,
+  "high_confidence": true|false,
+  "emergency_flags": ["flag if present"],
+  "recommended_specialist": "specialist type",
+  "next_steps": "recommended actions"
+}}"""
+
+URGENCY_ASSESSMENT_SYSTEM = """You are the urgency assessment module for MediAI. Assess urgency independently from diagnosis.
+
+Urgency levels:
+- EMERGENCY: Requires immediate medical attention (chest pain, difficulty breathing, uncontrolled bleeding, etc.)
+- URGENT: Should be seen within 24 hours (severe pain, signs of infection, etc.)
+- SOON: Should see doctor within 1 week (concerning symptoms, requires evaluation)
+- ROUTINE: Can schedule regular appointment (minor symptoms, follow-up)
+
+Base urgency ONLY on severity of current symptoms and red flags, not on diagnosis."""
+
+URGENCY_ASSESSMENT_USER = """Patient Symptoms:
+{symptoms}
+
+Red Flags Present:
+{red_flags}
+
+Current Severity:
+{severity_assessment}
+
+Assess urgency independent of specific diagnosis. Return JSON:
+{{
+  "urgency_level": "EMERGENCY|URGENT|SOON|ROUTINE",
+  "key_factors": ["factor 1", "factor 2"],
+  "red_flag_concerns": ["concern 1"],
+  "immediate_actions": "what to do now",
+  "follow_up_timeline": "when to follow up",
+  "reasoning": "explanation"
+}}"""
+
+CONVERSATION_SUMMARY_SYSTEM = """You are the conversation summary generator for MediAI. Create a clear, structured summary of the patient encounter for the final report."""
+
+CONVERSATION_SUMMARY_USER = """Patient Conversation History:
+{conversation_history}
+
+Patient State:
+{patient_state}
+
+Generate a professional summary. Return JSON:
+{{
+  "chief_complaint": "primary concern",
+  "history_of_present_illness": "narrative summary",
+  "symptoms_present": ["symptom 1 with details"],
+  "symptoms_absent": ["symptom 1"],
+  "relevant_risk_factors": ["risk factor 1"],
+  "relevant_history": ["history item"],
+  "physical_assessment_notes": "if any observations",
+  "key_findings": ["finding 1"],
+  "diagnostic_impression": "summary of considerations",
+  "summary": "concise 2-3 sentence summary"
+}}"""

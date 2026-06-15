@@ -29,14 +29,15 @@ async def generate_questions(req: SymptomRequest):
 @router.post("/process-message")
 async def process_message(req: ConversationalRequest):
     """
-    Handles subsequent conversational turns.
+    Handles subsequent conversational turns with patient state tracking.
     """
     try:
         result = run_conversational_step(
             session_id=req.session_id,
             message=req.message,
             user_id=req.user_id,
-            chat_history=req.chat_history
+            chat_history=req.chat_history,
+            patient_state=req.patient_state  # NEW: pass patient state
         )
         return result
     except Exception as e:
@@ -47,8 +48,8 @@ async def process_message(req: ConversationalRequest):
 async def generate_report(req: ReportRequest):
     """
     Step 2 of the triage pipeline.
-    Accepts session ID, symptom, user answers, and optional image analysis.
-    Runs full triage analysis via LangGraph and returns the report.
+    Accepts session ID, symptom, user answers, optional image analysis, and patient state.
+    Runs full triage analysis via LangGraph and returns enhanced report with differential diagnoses.
     """
     if not req.symptom.strip():
         raise HTTPException(status_code=400, detail="Symptom text is required")
@@ -59,7 +60,8 @@ async def generate_report(req: ReportRequest):
             answers=req.answers,
             chat_history=req.chat_history,
             user_id=req.user_id,
-            image_analysis=req.image_analysis
+            image_analysis=req.image_analysis,
+            patient_state=req.patient_state  # NEW: pass patient state
         )
         return result
     except Exception as e:
@@ -70,3 +72,4 @@ async def generate_report(req: ReportRequest):
 async def submit_answers(req: ReportRequest):
     """Alias for /generate-report for compatibility."""
     return await generate_report(req)
+

@@ -21,6 +21,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from rag_pipeline.rag_engine import retrieve, format_context
 from fastapi_ai.models.llm_client import chat_json, chat
+from fastapi_ai.models.patient_state import PatientState as PatientStateModel, create_empty_patient_state
+from fastapi_ai.models.state_manager import PatientStateManager
+from fastapi_ai.models.diagnostic_engine import DiagnosticRankingEngine
 from fastapi_ai.prompts.templates import (
     FOLLOWUP_QUESTIONS_SYSTEM, FOLLOWUP_QUESTIONS_USER,
     TRIAGE_ANALYSIS_SYSTEM, TRIAGE_ANALYSIS_USER,
@@ -28,6 +31,9 @@ from fastapi_ai.prompts.templates import (
     INTENT_DETECTION_SYSTEM, INTENT_DETECTION_USER,
     INPUT_ANALYSIS_SYSTEM, DYNAMIC_REASONING_SYSTEM,
     CONVERSATIONAL_TURN_SYSTEM,
+    DIFFERENTIAL_DIAGNOSIS_SYSTEM, DIFFERENTIAL_DIAGNOSIS_USER,
+    URGENCY_ASSESSMENT_SYSTEM, URGENCY_ASSESSMENT_USER,
+    CONVERSATION_SUMMARY_SYSTEM, CONVERSATION_SUMMARY_USER,
     )
 
 
@@ -54,6 +60,13 @@ class TriageState(TypedDict):
     current_question: str
     is_complete: bool
     validation_error: Optional[str]
+    # NEW: Patient state tracking
+    patient_state: Optional[dict]
+    # NEW: Differential diagnosis
+    differential_diagnoses: Optional[List[dict]]
+    urgency_assessment: Optional[dict]
+    conversation_summary: Optional[dict]
+
 
 
 # ---- Node functions ----
@@ -122,6 +135,93 @@ def node_conversational_turn(state: TriageState) -> TriageState:
         print(f"Error in conversational turn: {e}")
         state["intent_message"] = "I'm sorry, I'm having trouble processing that. Could you tell me more about your symptoms?"
     return state
+
+
+# NEW NODES FOR PATIENT STATE AND DIFFERENTIAL DIAGNOSIS
+
+def node_update_patient_state(state: TriageState) -> TriageState:
+    """NEW: Update patient state based on latest user message."""
+    state_manager = PatientStateManager()
+    
+    # Initialize or retrieve patient state
+    if not state.get("patient_state"):
+        patient_state = state_manager.initialize_state(state["session_id"], state["user_id"])
+    else:
+        patient_state = state_manager.from_dict(state["patient_state"])
+    
+    # Get latest user message
+    latest_user_msg = state["chat_history"][-1]["content"] if state["chat_history"] else ""
+    
+    if latest_user_msg:
+        # Update state from message
+        patient_state = state_manager.update_state_from_message(
+            patient_state,
+            latest_user_msg,
+            state.get("current_question"),
+            state.get("current_turn", 1)
+        )
+    
+    # Store updated state
+    state["patient_state"] = state_manager.to_dict(patient_state)
+    
+    return state
+
+
+def node_generate_questions_with_memory(state: TriageState) -> TriageState:
+    """NEW: Generate questions while avoiding repeats (memory-aware)."""
+    state_manager = PatientStateManager()
+    patient_state = state_manager.from_dict(state.get("patient_state", {}))
+    
+    # Generate initial questions
+    image_hint = (
+        "\n\nIf this may involve a visible rash, cut, wound, burn, swelling, pus, skin infection, or injury, "
+        "include one question asking the user to upload a clear photo of the affected area if they feel comfortable."
+    )
+    prompt_user = FOLLOWUP_QUESTIONS_USER.format(
+        concern=state.get("user_concern", ""),
+        symptom=state["primary_symptom"] + image_hint,
+        context=state["retrieved_context"]
+    )
+    try:
+        result = chat_json(FOLLOWUP_QUESTIONS_SYSTEM, prompt_user)
+        questions = result.get("questions", [])
+    except Exception as e:
+        print(f"Error generating AI questions: {e}")
+        questions = []
+    
+    if not questions:
+        visible_keywords = ["infection", "rash", "wound", "cut", "burn", "swelling", "pus", "eye", "skin", "injury"]
+        is_visible = any(kw in state["primary_symptom"].lower() for kw in visible_keywords)
+        
+        questions = [
+            f"How long have you been experiencing {state['primary_symptom']}?",
+            "On a scale of 1 to 10, how severe is the discomfort?"
+        ]
+        
+        if is_visible:
+            questions.append("Could you please upload a clear photo of the affected area if you haven't already?")
+            questions.append("Is there any discharge, pus, or spreading redness?")
+        else:
+            questions.append("Did this start suddenly or gradually?")
+            questions.append("Do you have any known allergies related to these symptoms?")
+            
+        questions.extend([
+            "Do you have any other symptoms such as fever, nausea, or fatigue?",
+            "Are you currently taking any medications for this or other conditions?"
+        ])
+    
+    # FILTER OUT ALREADY ASKED QUESTIONS
+    questions = state_manager.filter_questions(questions, patient_state)
+    
+    # Record the questions being asked
+    for q in questions:
+        patient_state = state_manager.record_question(patient_state, q)
+    
+    state["followup_questions"] = questions[:6]
+    state["patient_state"] = state_manager.to_dict(patient_state)
+    
+    return state
+
 
 
 
@@ -252,6 +352,113 @@ Image Analysis Results (for contextual support):
     return state
 
 
+def node_generate_differential_diagnoses(state: TriageState) -> TriageState:
+    """NEW: Generate ranked differential diagnoses using patient state."""
+    state_manager = PatientStateManager()
+    patient_state = state_manager.from_dict(state.get("patient_state", {}))
+    
+    # Extract patient information
+    symptoms_present = patient_state.get("symptoms", {})
+    symptoms_absent = patient_state.get("negative_findings", {})
+    risk_factors = patient_state.get("risk_factors", {})
+    exposure_history = patient_state.get("exposure_history", {})
+    medical_history = patient_state.get("medical_history", {})
+    
+    # Format for prompt
+    symptoms_summary = ", ".join([f"{name} ({data.get('severity', 'unknown')})" for name, data in symptoms_present.items()]) or "None recorded"
+    risk_summary = ", ".join([name for name, data in risk_factors.items() if data.get('status') == 'present']) or "None identified"
+    negative_summary = ", ".join(symptoms_absent.keys()) or "None noted"
+    exposure_summary = ", ".join(exposure_history.keys()) or "None mentioned"
+    medical_summary = ", ".join(medical_history.keys()) or "None provided"
+    
+    # Get preliminary conditions from triage result
+    triage_cond = state["triage_result"].get("possible_condition", "Unknown")
+    preliminary = [triage_cond]
+    
+    # Add complementary diagnoses based on symptoms
+    if "fever" in symptoms_summary.lower() or "cough" in symptoms_summary.lower():
+        preliminary.extend(["COVID-19", "Influenza", "Pneumonia"])
+    if "rash" in symptoms_summary.lower():
+        preliminary.extend(["Allergic Reaction", "Dermatitis"])
+    if "chest pain" in symptoms_summary.lower():
+        preliminary.extend(["Myocarditis", "Pleurisy"])
+    
+    preliminary = list(set(preliminary))[:5]  # Get unique, top 5
+    
+    # Call differential diagnosis prompt
+    prompt_user = DIFFERENTIAL_DIAGNOSIS_USER.format(
+        chief_complaint=patient_state.get("primary_concern", "Unknown"),
+        symptoms_summary=symptoms_summary,
+        risk_factors_summary=risk_summary,
+        negative_findings_summary=negative_summary,
+        exposure_history_summary=exposure_summary,
+        medical_history_summary=medical_summary,
+        medical_context=state.get("retrieved_context", "")[:1500]
+    )
+    
+    try:
+        result = chat_json(DIFFERENTIAL_DIAGNOSIS_SYSTEM, prompt_user, max_tokens=1500)
+        diagnoses = result.get("ranked_diagnoses", [])
+        state["differential_diagnoses"] = diagnoses
+    except Exception as e:
+        print(f"Error generating differential diagnoses: {e}")
+        # Fallback to simple ranking
+        state["differential_diagnoses"] = [{
+            "rank": 1,
+            "condition": state["triage_result"].get("possible_condition", "Unknown"),
+            "confidence": 0.6,
+            "likelihood_category": "moderate",
+            "supporting_evidence": state["triage_result"].get("symptoms_listed", []),
+            "contradicting_evidence": [],
+            "requires_emergency": False,
+            "reasoning": state["triage_result"].get("reasoning", "")
+        }]
+    
+    return state
+
+
+def node_assess_urgency(state: TriageState) -> TriageState:
+    """NEW: Assess urgency independently from diagnosis."""
+    state_manager = PatientStateManager()
+    patient_state = state_manager.from_dict(state.get("patient_state", {}))
+    
+    # Get symptom severity info
+    symptoms_present = patient_state.get("symptoms", {})
+    severity_list = [data.get("severity", "moderate") for data in symptoms_present.values()]
+    
+    severity_mapping = {"mild": 1, "moderate": 2, "severe": 3, "unknown": 2}
+    avg_severity = sum(severity_mapping.get(s.lower(), 2) for s in severity_list) / len(severity_list) if severity_list else 2
+    
+    red_flags = patient_state.get("red_flags_present", [])
+    
+    # Format for prompt
+    symptoms_str = ", ".join([f"{name} ({data.get('severity', 'unknown')})" for name, data in symptoms_present.items()]) or "No symptoms"
+    red_flags_str = ", ".join(red_flags) if red_flags else "None"
+    severity_str = "Severe" if avg_severity >= 3 else ("Moderate" if avg_severity >= 2 else "Mild")
+    
+    prompt_user = URGENCY_ASSESSMENT_USER.format(
+        symptoms=symptoms_str,
+        red_flags=red_flags_str,
+        severity_assessment=severity_str
+    )
+    
+    try:
+        result = chat_json(URGENCY_ASSESSMENT_SYSTEM, prompt_user)
+        state["urgency_assessment"] = result
+    except Exception as e:
+        print(f"Error assessing urgency: {e}")
+        state["urgency_assessment"] = {
+            "urgency_level": "ROUTINE",
+            "key_factors": [],
+            "red_flag_concerns": red_flags,
+            "immediate_actions": "Monitor symptoms",
+            "follow_up_timeline": "1 week",
+            "reasoning": "Assessment based on current symptoms"
+        }
+    
+    return state
+
+
 def node_generate_explanation(state: TriageState) -> TriageState:
     """Generate a patient-friendly explanation."""
     try:
@@ -275,7 +482,7 @@ def node_generate_explanation(state: TriageState) -> TriageState:
 
 
 def node_generate_report(state: TriageState) -> TriageState:
-    """Compile the final structured report."""
+    """Compile the final structured report with differential diagnoses."""
     r = state["triage_result"]
     reasoning = r.get("reasoning", "")
     
@@ -286,7 +493,8 @@ def node_generate_report(state: TriageState) -> TriageState:
         img_summary = f"\n\nIMAGE ASSESSMENT: The uploaded {img.get('image_type', 'image')} showed {obs or 'no specific findings'}. Relevance: {img.get('possible_relevance', 'N/A')}."
         reasoning += img_summary
 
-    state["report"] = {
+    # Build enhanced report with differential diagnoses
+    report = {
         "session_id":            state["session_id"],
         "user_id":               state["user_id"],
         "possible_condition":    r.get("possible_condition", "Unknown"),
@@ -298,8 +506,17 @@ def node_generate_report(state: TriageState) -> TriageState:
         "explanation":           state.get("explanation", ""),
         "image_analysis":        state.get("image_analysis"),
         "generated_at":          datetime.utcnow().isoformat() + "Z",
+        # NEW: Differential diagnoses
+        "differential_diagnoses": state.get("differential_diagnoses", []),
+        # NEW: Urgency assessment
+        "urgency_assessment":    state.get("urgency_assessment", {}),
+        # NEW: Patient state summary
+        "patient_state":         state.get("patient_state"),
     }
+    
+    state["report"] = report
     return state
+
 
 
 # ---- Graph construction ----
@@ -345,18 +562,25 @@ def build_report_graph():
 
     graph = StateGraph(TriageState)
 
-    graph.add_node("process_answers",       node_process_answers)
-    graph.add_node("triage_engine",         node_triage_engine)
-    graph.add_node("generate_explanation",  node_generate_explanation)
-    graph.add_node("generate_report",       node_generate_report)
+    graph.add_node("process_answers",                node_process_answers)
+    graph.add_node("update_patient_state",           node_update_patient_state)
+    graph.add_node("triage_engine",                  node_triage_engine)
+    graph.add_node("generate_differential",          node_generate_differential_diagnoses)
+    graph.add_node("assess_urgency",                 node_assess_urgency)
+    graph.add_node("generate_explanation",           node_generate_explanation)
+    graph.add_node("generate_report",                node_generate_report)
 
     graph.set_entry_point("process_answers")
-    graph.add_edge("process_answers",      "triage_engine")
-    graph.add_edge("triage_engine",        "generate_explanation")
-    graph.add_edge("generate_explanation", "generate_report")
-    graph.add_edge("generate_report",      END)
+    graph.add_edge("process_answers",                "update_patient_state")
+    graph.add_edge("update_patient_state",           "triage_engine")
+    graph.add_edge("triage_engine",                  "generate_differential")
+    graph.add_edge("generate_differential",          "assess_urgency")
+    graph.add_edge("assess_urgency",                 "generate_explanation")
+    graph.add_edge("generate_explanation",           "generate_report")
+    graph.add_edge("generate_report",                END)
 
     return graph.compile()
+
 
 
 # ---- High-level API functions ----
@@ -365,7 +589,8 @@ def run_conversational_step(
     session_id: str,
     message: str,
     user_id: int,
-    chat_history: List[dict] = None
+    chat_history: List[dict] = None,
+    patient_state: dict = None
 ) -> dict:
     """V2: Run a single turn of the conversational triage."""
     if chat_history is None:
@@ -373,6 +598,13 @@ def run_conversational_step(
     
     # Add latest user message to history
     chat_history.append({"role": "user", "content": message})
+    
+    # Initialize state manager for patient state
+    state_manager = PatientStateManager()
+    if not patient_state:
+        ps = state_manager.initialize_state(session_id, user_id)
+    else:
+        ps = state_manager.from_dict(patient_state)
     
     state: TriageState = {
         "session_id":          session_id,
@@ -391,9 +623,13 @@ def run_conversational_step(
         "user_concern":        "",
         "acknowledgment":      "",
         "internal_reasoning":  "",
-        "current_question":    "", # We might want to pass this in from the session
+        "current_question":    "",
         "is_complete":         False,
         "validation_error":    None,
+        "patient_state":       state_manager.to_dict(ps),
+        "differential_diagnoses": None,
+        "urgency_assessment":  None,
+        "conversation_summary": None,
     }
 
     graph = build_graph()
@@ -415,6 +651,7 @@ def run_conversational_step(
         "is_complete":    final_state.get("is_complete", False),
         "chat_history":   final_state["chat_history"],
         "internal_reasoning": final_state.get("internal_reasoning", ""),
+        "patient_state":  final_state.get("patient_state"),  # Return updated patient state
     }
 
 
@@ -428,8 +665,24 @@ def run_question_generation(symptom: str, user_id: int, session_id: str = None) 
     )
 
 
-def run_report_generation(session_id: str, symptom: str, answers: list, user_id: int, image_analysis: dict = None, chat_history: list = None) -> dict:
-    """Run the full triage analysis and report generation phase with optional image analysis."""
+def run_report_generation(
+    session_id: str,
+    symptom: str,
+    answers: list,
+    user_id: int,
+    image_analysis: dict = None,
+    chat_history: list = None,
+    patient_state: dict = None
+) -> dict:
+    """Run the full triage analysis and report generation phase with patient state tracking."""
+    
+    # Initialize patient state if not provided
+    state_manager = PatientStateManager()
+    if not patient_state:
+        ps = state_manager.initialize_state(session_id, user_id)
+    else:
+        ps = state_manager.from_dict(patient_state)
+    
     state: TriageState = {
         "session_id":          session_id,
         "user_id":             user_id,
@@ -443,6 +696,10 @@ def run_report_generation(session_id: str, symptom: str, answers: list, user_id:
         "explanation":         "",
         "report":              {},
         "error":               None,
+        "patient_state":       state_manager.to_dict(ps),
+        "differential_diagnoses": None,
+        "urgency_assessment":  None,
+        "conversation_summary": None,
     }
 
     graph = build_report_graph()
@@ -450,9 +707,13 @@ def run_report_generation(session_id: str, symptom: str, answers: list, user_id:
         final_state = graph.invoke(state)
     else:
         state = node_process_answers(state)
+        state = node_update_patient_state(state)
         state = node_triage_engine(state)
+        state = node_generate_differential_diagnoses(state)
+        state = node_assess_urgency(state)
         state = node_generate_explanation(state)
         state = node_generate_report(state)
         final_state = state
 
     return {"report": final_state["report"]}
+
