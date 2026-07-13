@@ -20,6 +20,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from rag_pipeline.rag_engine import retrieve, format_context
+from rag_pipeline.frag_engine import build_frag_context
 from fastapi_ai.models.llm_client import chat_json, chat
 from fastapi_ai.models.patient_state import PatientState as PatientStateModel, create_empty_patient_state
 from fastapi_ai.models.state_manager import PatientStateManager
@@ -66,6 +67,7 @@ class TriageState(TypedDict):
     differential_diagnoses: Optional[List[dict]]
     urgency_assessment: Optional[dict]
     conversation_summary: Optional[dict]
+    frag_retrieval: Optional[dict]
 
 
 
@@ -149,9 +151,15 @@ def node_update_patient_state(state: TriageState) -> TriageState:
     else:
         patient_state = state_manager.from_dict(state["patient_state"])
     
-    # Get latest user message
-    latest_user_msg = state["chat_history"][-1]["content"] if state["chat_history"] else ""
-    
+    # Get latest user message. Report-generation requests often provide
+    # symptom/answers without chat_history, so seed state from those fields.
+    if state["chat_history"]:
+        latest_user_msg = state["chat_history"][-1]["content"]
+    else:
+        answer_text = " ".join(state.get("user_answers") or [])
+        latest_user_msg = " ".join(
+            part for part in [state.get("primary_symptom", ""), answer_text] if part
+        )
     if latest_user_msg:
         # Update state from message
         patient_state = state_manager.update_state_from_message(
@@ -226,14 +234,25 @@ def node_generate_questions_with_memory(state: TriageState) -> TriageState:
 
 
 def node_rag_retrieval(state: TriageState) -> TriageState:
-    """Retrieve relevant medical knowledge from vector store."""
+    """Retrieve relevant medical knowledge from federated hospital stores."""
     query = state["primary_symptom"]
     if state.get("user_answers"):
         query += " " + " ".join(state["user_answers"])
-    docs = retrieve(query, top_k=6)
-    state["retrieved_context"] = format_context(docs)
+    try:
+        frag = build_frag_context(query, top_k_per_hospital=4, final_top_k=10)
+        state["retrieved_context"] = frag["context"]
+        state["frag_retrieval"] = {
+            "raw_evidence_count": frag["raw_evidence_count"],
+            "fused_evidence_count": len(frag["fused_evidence"]),
+            "per_hospital_counts": {hid: len(items) for hid, items in frag["per_hospital"].items()},
+            "evidence": frag["fused_evidence"],
+        }
+    except Exception as exc:
+        print(f"FRAG retrieval unavailable; falling back to traditional RAG. {exc}")
+        docs = retrieve(query, top_k=6)
+        state["retrieved_context"] = format_context(docs)
+        state["frag_retrieval"] = None
     return state
-
 
 def node_generate_questions(state: TriageState) -> TriageState:
     """Generate follow-up questions using LLM + RAG context."""
@@ -280,17 +299,28 @@ def node_generate_questions(state: TriageState) -> TriageState:
 
 
 def node_process_answers(state: TriageState) -> TriageState:
-    """Re-retrieve context enriched by user answers and conversation history."""
+    """Re-retrieve federated context enriched by answers and conversation history."""
     query = state["primary_symptom"]
     if state.get("chat_history"):
         query += " " + " ".join([m["content"] for m in state["chat_history"] if m["role"] == "user"])
     elif state.get("user_answers"):
         query += " " + " ".join(state["user_answers"])
-    
-    docs = retrieve(query, top_k=8)
-    state["retrieved_context"] = format_context(docs)
-    return state
 
+    try:
+        frag = build_frag_context(query, top_k_per_hospital=5, final_top_k=12)
+        state["retrieved_context"] = frag["context"]
+        state["frag_retrieval"] = {
+            "raw_evidence_count": frag["raw_evidence_count"],
+            "fused_evidence_count": len(frag["fused_evidence"]),
+            "per_hospital_counts": {hid: len(items) for hid, items in frag["per_hospital"].items()},
+            "evidence": frag["fused_evidence"],
+        }
+    except Exception as exc:
+        print(f"FRAG retrieval unavailable; falling back to traditional RAG. {exc}")
+        docs = retrieve(query, top_k=8)
+        state["retrieved_context"] = format_context(docs)
+        state["frag_retrieval"] = None
+    return state
 
 def node_triage_engine(state: TriageState) -> TriageState:
     """Run triage analysis using LLM + enriched RAG context + conversation history."""
@@ -512,6 +542,8 @@ def node_generate_report(state: TriageState) -> TriageState:
         "urgency_assessment":    state.get("urgency_assessment", {}),
         # NEW: Patient state summary
         "patient_state":         state.get("patient_state"),
+        "frag_retrieval":        state.get("frag_retrieval"),
+        "retrieval_mode":        "FRAG" if state.get("frag_retrieval") else "RAG_FALLBACK",
     }
     
     state["report"] = report
@@ -630,6 +662,7 @@ def run_conversational_step(
         "differential_diagnoses": None,
         "urgency_assessment":  None,
         "conversation_summary": None,
+        "frag_retrieval":       None,
     }
 
     graph = build_graph()
@@ -700,6 +733,7 @@ def run_report_generation(
         "differential_diagnoses": None,
         "urgency_assessment":  None,
         "conversation_summary": None,
+        "frag_retrieval":       None,
     }
 
     graph = build_report_graph()
@@ -716,4 +750,11 @@ def run_report_generation(
         final_state = state
 
     return {"report": final_state["report"]}
+
+
+
+
+
+
+
 

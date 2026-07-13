@@ -7,9 +7,11 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional, Set
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from fastapi import APIRouter, Query
 from models.schemas import DoctorRecommendationRequest
+from rag_pipeline.frag_engine import recommend_doctors_frag
 
 router = APIRouter(tags=["Doctors"])
 
@@ -458,6 +460,30 @@ def _recommend_doctors(
     conditions = _infer_conditions(assessment_text, possible_condition or "")
     specialties = _infer_specialties(specialization or "", assessment_text, possible_condition or "", conditions)
 
+    try:
+        frag_result = recommend_doctors_frag(
+            specialty=specialties[0] if specialties else "Medicine Specialist",
+            diagnosis=possible_condition or " ".join(conditions[:2]),
+            symptoms=symptom or assessment_text,
+            city=location or "",
+            limit=limit,
+        )
+        frag_result["inferred_specialization"] = specialties[0] if specialties else ""
+        frag_result["specialists_considered"] = specialties
+        frag_result["possible_conditions"] = conditions
+        frag_result["assessment_context"] = {
+            "symptom": symptom or "",
+            "possible_condition": possible_condition or "",
+            "urgency": urgency or "",
+            "location": location or "",
+            "used_conversation": bool(conversation_text),
+            "used_report": bool(report_text or report_condition or report_specialist),
+            "retrieval_mode": "FRAG_DOCTOR_RANKING",
+        }
+        return frag_result
+    except Exception as exc:
+        print(f"FRAG doctor ranking unavailable; falling back to CSV ranking. {exc}")
+
     ranked = [
         _score_doctor(doctor, specialties, conditions, assessment_text, location or "")
         for doctor in doctors
@@ -525,3 +551,5 @@ async def doctor_recommendation_from_assessment(req: DoctorRecommendationRequest
         report=req.report,
         limit=req.limit,
     )
+
+

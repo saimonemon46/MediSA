@@ -22,6 +22,7 @@ build/
 vector_store/*.faiss
 vector_store/*.pkl
 vector_store/*.index
+vector_store/frag/
 
 # Uploads (user data — never commit)
 backend_php/uploads/*
@@ -42,3 +43,4 @@ logs/
 # Node (if added later)
 node_modules/
 npm-debug.log
+
