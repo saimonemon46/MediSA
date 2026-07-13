@@ -19,12 +19,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from rag_pipeline.rag_engine import build_index, retrieve, format_context
+from rag_pipeline.federated_retriever import get_federated_retriever
 
 
 def main():
     parser = argparse.ArgumentParser(description="Build MediAI RAG vector index")
     parser.add_argument("--force", action="store_true", help="Force rebuild even if index exists")
     parser.add_argument("--test",  action="store_true", help="Test retrieval after building")
+    parser.add_argument("--frag", action="store_true", help="Build simulated hospital FRAG indexes")
     args = parser.parse_args()
 
     print("=" * 60)
@@ -32,6 +34,11 @@ def main():
     print("=" * 60)
 
     build_index(force=args.force)
+
+    if args.frag:
+        print("[FRAG] Building federated hospital indexes...")
+        get_federated_retriever().build_indexes(force=args.force)
+        print("[FRAG] Federated indexes ready.")
 
     if args.test:
         print("\n--- Test retrieval ---")
@@ -52,3 +59,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
