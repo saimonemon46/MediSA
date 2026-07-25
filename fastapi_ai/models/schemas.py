@@ -31,6 +31,10 @@ class DocumentAnalysisRequest(BaseModel):
     document_id: int
     file_path: str
 
+class EvaluationComparisonRequest(BaseModel):
+    """A single query evaluated by the existing RAG and FRAG pipelines."""
+    query: str = Field(..., min_length=2, max_length=2000)
+
 
 class DoctorRecommendationRequest(BaseModel):
     specialization: Optional[str] = ""
@@ -133,3 +137,7 @@ class EnhancedTriageReport(BaseModel):
     generated_at: str
     image_analysis: Optional[Dict[str, Any]] = None
 
+
+
+class EvaluationRunRequest(BaseModel):
+    k: int = Field(default=5, ge=1, le=25)

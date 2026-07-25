@@ -9,6 +9,7 @@ from routes.triage import router as triage_router
 from routes.documents import router as docs_router
 from routes.doctors import router as doctors_router
 from routes.symptom_images import router as symptom_images_router
+from routes.evaluation import router as evaluation_router
 import uvicorn
 
 app = FastAPI(
@@ -29,6 +30,7 @@ app.include_router(triage_router)
 app.include_router(docs_router)
 app.include_router(doctors_router)
 app.include_router(symptom_images_router)
+app.include_router(evaluation_router)
 
 
 @app.get("/")
@@ -44,6 +46,9 @@ async def root():
             "POST /analyze-symptom-image",
             "GET  /doctor-recommendation",
             "POST /doctor-recommendation",
+            "POST /evaluation/compare",
+            "POST /evaluation/run",
+            "GET  /evaluation/results",
         ]
     }
 
