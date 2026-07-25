@@ -1,0 +1,439 @@
+{
+  "version": 1,
+  "description": "Preliminary retrieval benchmark generated from actual MediSA CSV records shared by Traditional RAG and FRAG. Binary relevance only.",
+  "relevance": "binary",
+  "items": [
+    {
+      "query_id": "Q001",
+      "query": "Which specialist is recommended for Allergy?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:allergy"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": "Allergist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q002",
+      "query": "Which specialist is recommended for Hypertension?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hypertension"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": "Cardiologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q003",
+      "query": "Which specialist is recommended for Heart attack?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:heart attack"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": "Cardiologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q004",
+      "query": "Which specialist is recommended for Psoriasis?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:psoriasis"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Dermatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q005",
+      "query": "Which specialist is recommended for Chicken pox?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:chicken pox"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Dermatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q006",
+      "query": "Which specialist is recommended for Acne?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:acne"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Dermatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q007",
+      "query": "Which specialist is recommended for Impetigo?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:impetigo"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Dermatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q008",
+      "query": "Which specialist is recommended for Fungal infection?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:fungal infection"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Dermatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q009",
+      "query": "Which specialist is recommended for Hypothyroidism?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hypothyroidism"
+      ],
+      "expected_hospital": "Hospital C - Regional Clinical Consortium",
+      "expected_department": null,
+      "expected_specialist": "Endocrinologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q010",
+      "query": "Which specialist is recommended for Diabetes?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:diabetes"
+      ],
+      "expected_hospital": "Hospital C - Regional Clinical Consortium",
+      "expected_department": null,
+      "expected_specialist": "Endocrinologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q011",
+      "query": "Which specialist is recommended for Hypoglycemia?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hypoglycemia"
+      ],
+      "expected_hospital": "Hospital C - Regional Clinical Consortium",
+      "expected_department": null,
+      "expected_specialist": "Endocrinologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q012",
+      "query": "Which specialist is recommended for Hyperthyroidism?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hyperthyroidism"
+      ],
+      "expected_hospital": "Hospital C - Regional Clinical Consortium",
+      "expected_department": null,
+      "expected_specialist": "Endocrinologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q013",
+      "query": "Which specialist is recommended for GERD?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:gerd"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Gastroenterologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q014",
+      "query": "Which specialist is recommended for Peptic ulcer diseae?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:peptic ulcer diseae"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Gastroenterologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q015",
+      "query": "Which specialist is recommended for Jaundice?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:jaundice"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Gastroenterologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q016",
+      "query": "Which specialist is recommended for Dimorphic hemmorhoids(piles)?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:dimorphic hemmorhoids piles"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Gastroenterologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q017",
+      "query": "Which specialist is recommended for Gastroenteritis?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:gastroenteritis"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Gastroenterologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q018",
+      "query": "Which specialist is recommended for Urinary tract infection?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:urinary tract infection"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Gynecologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q019",
+      "query": "Which specialist is recommended for Chronic cholestasis?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:chronic cholestasis"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Hepatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q020",
+      "query": "Which specialist is recommended for hepatitis A?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hepatitis a"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Hepatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q021",
+      "query": "Which specialist is recommended for Hepatitis B?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hepatitis b"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "hepatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q022",
+      "query": "Which specialist is recommended for Hepatitis C?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hepatitis c"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Hepatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q023",
+      "query": "Which specialist is recommended for Hepatitis E?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hepatitis e"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Hepatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q024",
+      "query": "Which specialist is recommended for Hepatitis D?",
+      "category": "doctor_recommendation",
+      "relevant_document_ids": [
+        "disease:hepatitis d"
+      ],
+      "expected_hospital": "Hospital B - Specialty Care Institute",
+      "expected_department": null,
+      "expected_specialist": "Hepatologist",
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q025",
+      "query": "What healthcare information does MediSA contain for the symptom abdominal aortic aneurysm?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abdominal aortic aneurysm"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q026",
+      "query": "What healthcare information does MediSA contain for the symptom abdominal distention?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abdominal distention"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q027",
+      "query": "What healthcare information does MediSA contain for the symptom abdominal hernia?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abdominal hernia"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q028",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal appearing skin?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abnormal appearing skin"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q029",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal appearing tongue?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abnormal appearing tongue"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q030",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal breathing sounds?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abnormal breathing sounds"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q031",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal involuntary movements?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abnormal involuntary movements"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q032",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal movement of eyelid?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abnormal movement of eyelid"
+      ],
+      "expected_hospital": "Hospital C - Regional Clinical Consortium",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q033",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal size or shape of ear?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abnormal size or shape of ear"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q034",
+      "query": "What healthcare information does MediSA contain for the symptom abscess of nose?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abscess of nose"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q035",
+      "query": "What healthcare information does MediSA contain for the symptom abscess of the lung?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abscess of the lung"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    },
+    {
+      "query_id": "Q036",
+      "query": "What healthcare information does MediSA contain for the symptom abscess of the pharynx?",
+      "category": "symptom_triage",
+      "relevant_document_ids": [
+        "symptom:abscess of the pharynx"
+      ],
+      "expected_hospital": "Hospital A - Metropolitan General Network",
+      "expected_department": null,
+      "expected_specialist": null,
+      "expected_answer": null
+    }
+  ]
+}

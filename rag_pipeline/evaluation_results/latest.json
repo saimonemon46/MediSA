@@ -1,0 +1,1496 @@
+{
+  "run_id": "31c4a253-32f5-4f9d-b5dc-2fd6b8142953",
+  "timestamp": "2026-07-25T14:26:42.908732+00:00",
+  "benchmark_size": 36,
+  "k": 5,
+  "ground_truth": "dataset-labeled",
+  "relevance": "binary",
+  "configuration": {
+    "traditional": "combined/global corpus retrieval",
+    "frag": "independent hospital retrieval + existing fusion/reranking",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "answer_generation": "excluded"
+  },
+  "traditional_rag": {
+    "precision_at_k": 0.2,
+    "recall_at_k": 1.0,
+    "reciprocal_rank": 0.963888888888889,
+    "ndcg_at_k": 0.9727161822446111,
+    "hit_rate_at_k": 1.0,
+    "latency_ms": 40.79805555555556
+  },
+  "frag": {
+    "precision_at_k": 0.2,
+    "recall_at_k": 1.0,
+    "reciprocal_rank": 1.0,
+    "ndcg_at_k": 1.0,
+    "hit_rate_at_k": 1.0,
+    "latency_ms": 560.9693333333333
+  },
+  "category_metrics": {
+    "doctor_recommendation": {
+      "query_count": 24,
+      "traditional_rag": {
+        "precision_at_k": 0.20000000000000004,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "latency_ms": 31.181875
+      },
+      "frag": {
+        "precision_at_k": 0.20000000000000004,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "latency_ms": 433.61899999999997
+      }
+    },
+    "symptom_triage": {
+      "query_count": 12,
+      "traditional_rag": {
+        "precision_at_k": 0.20000000000000004,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 0.8916666666666666,
+        "ndcg_at_k": 0.9181485467338333,
+        "hit_rate_at_k": 1.0,
+        "latency_ms": 60.03041666666667
+      },
+      "frag": {
+        "precision_at_k": 0.20000000000000004,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "latency_ms": 815.6700000000001
+      }
+    }
+  },
+  "per_query_results": [
+    {
+      "query_id": "Q001",
+      "query": "Which specialist is recommended for Allergy?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:allergy"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:allergy",
+          "passage:1982eed225913ee2",
+          "passage:4ec4b40765cb7504",
+          "passage:621d8e4aff5ddf4a"
+        ],
+        "latency_ms": 20.127
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:allergy"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:allergy",
+          "symptom:allergy",
+          "disease:acne",
+          "symptom:food allergy"
+        ],
+        "latency_ms": 248.629
+      }
+    },
+    {
+      "query_id": "Q002",
+      "query": "Which specialist is recommended for Hypertension?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hypertension"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hypertension",
+          "disease:diabetes",
+          "disease:heart attack"
+        ],
+        "latency_ms": 22.967
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hypertension"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hypertension",
+          "disease:diabetes",
+          "disease:heart attack",
+          "symptom:malignant hypertension"
+        ],
+        "latency_ms": 311.426
+      }
+    },
+    {
+      "query_id": "Q003",
+      "query": "Which specialist is recommended for Heart attack?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:heart attack"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:heart attack",
+          "disease:hypertension",
+          "passage:a76d600adb1371a9",
+          "passage:5150e9bbb658c6e7",
+          "passage:ae83d3302b6c58a2"
+        ],
+        "latency_ms": 24.236
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:heart attack"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:heart attack",
+          "disease:hypertension",
+          "symptom:heart attack",
+          "disease:diabetes"
+        ],
+        "latency_ms": 387.309
+      }
+    },
+    {
+      "query_id": "Q004",
+      "query": "Which specialist is recommended for Psoriasis?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:psoriasis"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:psoriasis",
+          "symptom:psoriasis",
+          "disease:arthritis",
+          "passage:fc3ba6455fe1b479"
+        ],
+        "latency_ms": 22.892
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:psoriasis"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:psoriasis",
+          "symptom:psoriasis",
+          "disease:arthritis"
+        ],
+        "latency_ms": 336.513
+      }
+    },
+    {
+      "query_id": "Q005",
+      "query": "Which specialist is recommended for Chicken pox?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:chicken pox"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:chicken pox"
+        ],
+        "latency_ms": 17.376
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:chicken pox"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:chicken pox"
+        ],
+        "latency_ms": 497.759
+      }
+    },
+    {
+      "query_id": "Q006",
+      "query": "Which specialist is recommended for Acne?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:acne"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:acne",
+          "passage:ba3c08c297471d5d",
+          "passage:99ca32bf1580caa3",
+          "passage:2e4f4761f79f4f5c",
+          "passage:2ae8e66504056b3f"
+        ],
+        "latency_ms": 23.886
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:acne"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:acne",
+          "symptom:acne",
+          "symptom:acne or pimples",
+          "disease:psoriasis",
+          "disease:arthritis"
+        ],
+        "latency_ms": 355.711
+      }
+    },
+    {
+      "query_id": "Q007",
+      "query": "Which specialist is recommended for Impetigo?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:impetigo"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:impetigo",
+          "symptom:impetigo",
+          "passage:250dc5087a374e3a"
+        ],
+        "latency_ms": 23.513
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:impetigo"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:impetigo",
+          "symptom:impetigo"
+        ],
+        "latency_ms": 368.464
+      }
+    },
+    {
+      "query_id": "Q008",
+      "query": "Which specialist is recommended for Fungal infection?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:fungal infection"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:fungal infection",
+          "passage:f35d3abc77c1aba1"
+        ],
+        "latency_ms": 26.08
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:fungal infection"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:fungal infection",
+          "symptom:fungal infection of the skin",
+          "disease:tuberculosis",
+          "disease:arthritis"
+        ],
+        "latency_ms": 402.756
+      }
+    },
+    {
+      "query_id": "Q009",
+      "query": "Which specialist is recommended for Hypothyroidism?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hypothyroidism"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hypothyroidism",
+          "symptom:hypothyroidism",
+          "disease:hyperthyroidism",
+          "passage:979eb9f41d0ce564",
+          "passage:c604938f752011b7"
+        ],
+        "latency_ms": 27.436
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hypothyroidism"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hypothyroidism",
+          "symptom:hypothyroidism",
+          "disease:hyperthyroidism",
+          "disease:typhoid"
+        ],
+        "latency_ms": 376.161
+      }
+    },
+    {
+      "query_id": "Q010",
+      "query": "Which specialist is recommended for Diabetes?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:diabetes"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:diabetes",
+          "passage:814a3c3c0a19a359",
+          "passage:d0b7c4044741276e",
+          "passage:d654d0e73059286f",
+          "passage:c39fd8ef2f62cd04"
+        ],
+        "latency_ms": 26.641
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:diabetes"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:diabetes",
+          "disease:hypoglycemia",
+          "disease:hypertension",
+          "disease:arthritis",
+          "disease:tuberculosis"
+        ],
+        "latency_ms": 319.001
+      }
+    },
+    {
+      "query_id": "Q011",
+      "query": "Which specialist is recommended for Hypoglycemia?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hypoglycemia"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hypoglycemia",
+          "disease:diabetes",
+          "symptom:hypoglycemia",
+          "passage:6ae3c276844f8aff",
+          "disease:hypothyroidism"
+        ],
+        "latency_ms": 25.436
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hypoglycemia"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hypoglycemia",
+          "symptom:hypoglycemia",
+          "disease:diabetes",
+          "disease:hypothyroidism",
+          "disease:hypertension"
+        ],
+        "latency_ms": 343.588
+      }
+    },
+    {
+      "query_id": "Q012",
+      "query": "Which specialist is recommended for Hyperthyroidism?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hyperthyroidism"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hyperthyroidism",
+          "passage:c604938f752011b7",
+          "disease:hypothyroidism",
+          "passage:a34b4c725e569155",
+          "passage:7b557f5b80589565"
+        ],
+        "latency_ms": 24.425
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hyperthyroidism"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hyperthyroidism",
+          "disease:hypothyroidism",
+          "disease:hypertension",
+          "disease:typhoid"
+        ],
+        "latency_ms": 301.041
+      }
+    },
+    {
+      "query_id": "Q013",
+      "query": "Which specialist is recommended for GERD?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:gerd"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:gerd",
+          "passage:d2f252d73b1699a4",
+          "symptom:gastroesophageal reflux disease gerd",
+          "passage:548ffe46508e7963",
+          "passage:eb69a13b277ab304"
+        ],
+        "latency_ms": 26.827
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:gerd"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:gerd",
+          "symptom:gastroesophageal reflux disease gerd",
+          "disease:gastroenteritis",
+          "disease:diabetes"
+        ],
+        "latency_ms": 616.967
+      }
+    },
+    {
+      "query_id": "Q014",
+      "query": "Which specialist is recommended for Peptic ulcer diseae?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:peptic ulcer diseae"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:peptic ulcer diseae",
+          "disease:ulcerative colitis crohn s disease irritable bowel syndrome ibs treatment peptic ulcer jaundice hernia piles surgeries peptic gastric ulcer treatment",
+          "passage:2e9e3f05bfc1db9f",
+          "disease:peptic ulcer disease"
+        ],
+        "latency_ms": 42.2
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:peptic ulcer diseae"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:peptic ulcer diseae",
+          "symptom:gastroduodenal ulcer",
+          "disease:peptic ulcer disease"
+        ],
+        "latency_ms": 304.891
+      }
+    },
+    {
+      "query_id": "Q015",
+      "query": "Which specialist is recommended for Jaundice?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:jaundice"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:jaundice",
+          "passage:cf5e049f7be1fcd6",
+          "symptom:jaundice"
+        ],
+        "latency_ms": 35.353
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:jaundice"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:jaundice",
+          "symptom:jaundice",
+          "symptom:neonatal jaundice"
+        ],
+        "latency_ms": 651.648
+      }
+    },
+    {
+      "query_id": "Q016",
+      "query": "Which specialist is recommended for Dimorphic hemmorhoids(piles)?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:dimorphic hemmorhoids piles"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:dimorphic hemmorhoids piles"
+        ],
+        "latency_ms": 28.304
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:dimorphic hemmorhoids piles"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:dimorphic hemmorhoids piles",
+          "disease:dimorphic hemorrhoids piles",
+          "disease:dimorphic hemorrhoids"
+        ],
+        "latency_ms": 364.957
+      }
+    },
+    {
+      "query_id": "Q017",
+      "query": "Which specialist is recommended for Gastroenteritis?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:gastroenteritis"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:gastroenteritis",
+          "passage:beb9c53daf513b12",
+          "passage:d2f252d73b1699a4",
+          "passage:a5ae56ae8087ffa5",
+          "passage:a0bf0285035721cf"
+        ],
+        "latency_ms": 41.218
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:gastroenteritis"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:gastroenteritis",
+          "disease:gerd",
+          "disease:jaundice",
+          "symptom:noninfectious gastroenteritis",
+          "symptom:infectious gastroenteritis"
+        ],
+        "latency_ms": 677.225
+      }
+    },
+    {
+      "query_id": "Q018",
+      "query": "Which specialist is recommended for Urinary tract infection?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:urinary tract infection"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:urinary tract infection",
+          "passage:c679d5d5455c1299",
+          "passage:5c44a442bc5aa5f2",
+          "passage:682cfdd4641b6c05"
+        ],
+        "latency_ms": 41.668
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:urinary tract infection"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:urinary tract infection",
+          "symptom:urinary tract infection"
+        ],
+        "latency_ms": 595.865
+      }
+    },
+    {
+      "query_id": "Q019",
+      "query": "Which specialist is recommended for Chronic cholestasis?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:chronic cholestasis"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:chronic cholestasis"
+        ],
+        "latency_ms": 45.546
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:chronic cholestasis"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:chronic cholestasis",
+          "disease:arthritis",
+          "symptom:cholesteatoma"
+        ],
+        "latency_ms": 648.955
+      }
+    },
+    {
+      "query_id": "Q020",
+      "query": "Which specialist is recommended for hepatitis A?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hepatitis a"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis a",
+          "disease:hepatitis e",
+          "disease:hepatitis b",
+          "disease:hepatitis d",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 62.314
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hepatitis a"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis a",
+          "disease:hepatitis e",
+          "disease:hepatitis b",
+          "disease:hepatitis d",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 378.888
+      }
+    },
+    {
+      "query_id": "Q021",
+      "query": "Which specialist is recommended for Hepatitis B?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hepatitis b"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis b",
+          "disease:hepatitis a",
+          "disease:hepatitis e",
+          "disease:hepatitis d",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 14.971
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hepatitis b"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis b",
+          "disease:hepatitis a",
+          "disease:hepatitis e",
+          "disease:hepatitis d",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 248.959
+      }
+    },
+    {
+      "query_id": "Q022",
+      "query": "Which specialist is recommended for Hepatitis C?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hepatitis c"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis c",
+          "disease:hepatitis a",
+          "disease:hepatitis e",
+          "disease:hepatitis b",
+          "disease:hepatitis d"
+        ],
+        "latency_ms": 14.743
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hepatitis c"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis c",
+          "disease:hepatitis a",
+          "disease:hepatitis e",
+          "disease:hepatitis b",
+          "disease:hepatitis d"
+        ],
+        "latency_ms": 547.784
+      }
+    },
+    {
+      "query_id": "Q023",
+      "query": "Which specialist is recommended for Hepatitis E?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hepatitis e"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis e",
+          "disease:hepatitis a",
+          "disease:hepatitis d",
+          "disease:hepatitis b",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 41.44
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hepatitis e"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis e",
+          "disease:hepatitis a",
+          "disease:hepatitis d",
+          "disease:hepatitis b",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 563.904
+      }
+    },
+    {
+      "query_id": "Q024",
+      "query": "Which specialist is recommended for Hepatitis D?",
+      "category": "doctor_recommendation",
+      "traditional_rag": {
+        "relevant_hits": [
+          "disease:hepatitis d"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis d",
+          "disease:hepatitis e",
+          "disease:hepatitis a",
+          "disease:hepatitis b",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 68.766
+      },
+      "frag": {
+        "relevant_hits": [
+          "disease:hepatitis d"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "disease:hepatitis d",
+          "disease:hepatitis e",
+          "disease:hepatitis a",
+          "disease:hepatitis b",
+          "disease:hepatitis c"
+        ],
+        "latency_ms": 558.455
+      }
+    },
+    {
+      "query_id": "Q025",
+      "query": "What healthcare information does MediSA contain for the symptom abdominal aortic aneurysm?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abdominal aortic aneurysm"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abdominal aortic aneurysm",
+          "passage:0e295868d5672da3",
+          "passage:8eb5c8b42dc7d74b",
+          "passage:109585b86f99f434",
+          "passage:660213da79060334"
+        ],
+        "latency_ms": 75.387
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abdominal aortic aneurysm"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abdominal aortic aneurysm",
+          "symptom:thoracic aortic aneurysm",
+          "symptom:aortic valve disease",
+          "passage:529f526aba143d69",
+          "symptom:peripheral arterial disease"
+        ],
+        "latency_ms": 830.108
+      }
+    },
+    {
+      "query_id": "Q026",
+      "query": "What healthcare information does MediSA contain for the symptom abdominal distention?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abdominal distention"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abdominal distention",
+          "passage:f61108d1da4cfa55",
+          "passage:2e9e3f05bfc1db9f",
+          "passage:871fcd53626989f2",
+          "passage:43742000e18f2a2b"
+        ],
+        "latency_ms": 78.94
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abdominal distention"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abdominal distention",
+          "symptom:abdominal hernia",
+          "symptom:lower abdominal pain",
+          "symptom:injury to the abdomen",
+          "symptom:intestinal malabsorption"
+        ],
+        "latency_ms": 758.803
+      }
+    },
+    {
+      "query_id": "Q027",
+      "query": "What healthcare information does MediSA contain for the symptom abdominal hernia?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abdominal hernia"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abdominal hernia",
+          "passage:8963e2286d8f5871",
+          "symptom:inguinal hernia",
+          "passage:ea1edbe6cb8e6b95",
+          "symptom:hiatal hernia"
+        ],
+        "latency_ms": 49.461
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abdominal hernia"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abdominal hernia",
+          "symptom:inguinal hernia",
+          "symptom:hiatal hernia",
+          "symptom:abdominal distention",
+          "symptom:herniated disk"
+        ],
+        "latency_ms": 992.77
+      }
+    },
+    {
+      "query_id": "Q028",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal appearing skin?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abnormal appearing skin"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 0.5,
+        "ndcg_at_k": 0.6309297535714575,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "passage:ad2ddaee5477e522",
+          "symptom:abnormal appearing skin",
+          "passage:da33f6361ab8d11d",
+          "passage:7f19e5919ba178f2"
+        ],
+        "latency_ms": 45.446
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abnormal appearing skin"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal appearing skin",
+          "symptom:skin disorder",
+          "symptom:skin lesion",
+          "symptom:atrophic skin condition",
+          "symptom:intertrigo skin condition"
+        ],
+        "latency_ms": 830.821
+      }
+    },
+    {
+      "query_id": "Q029",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal appearing tongue?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abnormal appearing tongue"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal appearing tongue",
+          "passage:e915e1a54df50728",
+          "symptom:tongue lesions",
+          "symptom:tongue pain",
+          "passage:e979e11916a1ae15"
+        ],
+        "latency_ms": 54.853
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abnormal appearing tongue"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal appearing tongue",
+          "symptom:tongue lesions",
+          "symptom:tongue pain",
+          "symptom:swollen tongue",
+          "symptom:tongue bleeding"
+        ],
+        "latency_ms": 764.625
+      }
+    },
+    {
+      "query_id": "Q030",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal breathing sounds?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abnormal breathing sounds"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal breathing sounds",
+          "passage:a796e3567a08d186",
+          "passage:cae5747b3691bafc",
+          "passage:37c2aafff7f14846",
+          "symptom:difficulty breathing"
+        ],
+        "latency_ms": 57.19
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abnormal breathing sounds"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal breathing sounds",
+          "symptom:difficulty breathing",
+          "symptom:breathing fast",
+          "symptom:apnea",
+          "disease:bronchial asthma"
+        ],
+        "latency_ms": 1019.234
+      }
+    },
+    {
+      "query_id": "Q031",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal involuntary movements?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abnormal involuntary movements"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal involuntary movements",
+          "passage:edfc66dbe747969a",
+          "passage:4a4798460b983018",
+          "symptom:problems with movement",
+          "passage:24ea45f1a9af597d"
+        ],
+        "latency_ms": 58.487
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abnormal involuntary movements"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal involuntary movements",
+          "symptom:problems with movement",
+          "symptom:tic movement disorder",
+          "symptom:autonomic nervous system disorder",
+          "symptom:restless leg syndrome"
+        ],
+        "latency_ms": 758.057
+      }
+    },
+    {
+      "query_id": "Q032",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal movement of eyelid?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abnormal movement of eyelid"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal movement of eyelid",
+          "passage:d69e879910d4bc04",
+          "symptom:eye moves abnormally",
+          "passage:4ca9474de716b665",
+          "symptom:eyelid retracted"
+        ],
+        "latency_ms": 57.385
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abnormal movement of eyelid"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal movement of eyelid",
+          "symptom:eyelid retracted",
+          "symptom:mass on eyelid",
+          "symptom:eyelid lesion or rash",
+          "symptom:eye moves abnormally"
+        ],
+        "latency_ms": 579.13
+      }
+    },
+    {
+      "query_id": "Q033",
+      "query": "What healthcare information does MediSA contain for the symptom abnormal size or shape of ear?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abnormal size or shape of ear"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal size or shape of ear",
+          "passage:21b88fd736615263",
+          "passage:d64cc67648e5fe9e",
+          "symptom:mass on ear",
+          "passage:9ee54c4304d3b3a3"
+        ],
+        "latency_ms": 50.33
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abnormal size or shape of ear"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abnormal size or shape of ear",
+          "symptom:mass on ear",
+          "symptom:fluid in ear",
+          "symptom:ear pain",
+          "symptom:eustachian tube dysfunction ear disorder"
+        ],
+        "latency_ms": 689.928
+      }
+    },
+    {
+      "query_id": "Q034",
+      "query": "What healthcare information does MediSA contain for the symptom abscess of nose?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abscess of nose"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abscess of nose",
+          "passage:9f96c01809257315",
+          "symptom:open wound of the nose",
+          "symptom:deviated nasal septum",
+          "symptom:foreign body in the nose"
+        ],
+        "latency_ms": 51.492
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abscess of nose"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abscess of nose",
+          "symptom:nose disorder",
+          "symptom:open wound of the nose",
+          "symptom:foreign body in the nose",
+          "symptom:deviated nasal septum"
+        ],
+        "latency_ms": 857.773
+      }
+    },
+    {
+      "query_id": "Q035",
+      "query": "What healthcare information does MediSA contain for the symptom abscess of the lung?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abscess of the lung"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 0.2,
+        "ndcg_at_k": 0.38685280723454163,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "passage:a4348fd62140b1f8",
+          "passage:3c9af0f8ef146123",
+          "passage:fd9cb29406e7b21e",
+          "passage:119dfea856e8ed1e",
+          "symptom:abscess of the lung"
+        ],
+        "latency_ms": 79.705
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abscess of the lung"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abscess of the lung",
+          "symptom:interstitial lung disease",
+          "symptom:lung contusion",
+          "symptom:lung cancer",
+          "disease:bronchial asthma"
+        ],
+        "latency_ms": 889.1
+      }
+    },
+    {
+      "query_id": "Q036",
+      "query": "What healthcare information does MediSA contain for the symptom abscess of the pharynx?",
+      "category": "symptom_triage",
+      "traditional_rag": {
+        "relevant_hits": [
+          "symptom:abscess of the pharynx"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abscess of the pharynx",
+          "passage:62c3dbe3d167a9a5",
+          "passage:7ad92c8d94e01064",
+          "passage:86b64d39f812f3a6",
+          "passage:4a4798460b983018"
+        ],
+        "latency_ms": 61.689
+      },
+      "frag": {
+        "relevant_hits": [
+          "symptom:abscess of the pharynx"
+        ],
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0,
+        "ndcg_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "retrieved_document_ids": [
+          "symptom:abscess of the pharynx",
+          "symptom:pharyngitis",
+          "symptom:abscess of the lung",
+          "symptom:intracranial abscess",
+          "symptom:postoperative infection"
+        ],
+        "latency_ms": 817.691
+      }
+    }
+  ],
+  "invalid_benchmark_items": []
+}
