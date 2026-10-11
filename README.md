@@ -6,10 +6,19 @@
 [![FAISS](https://img.shields.io/badge/FAISS-Vector%20Store-00599C.svg)](https://github.com/facebookresearch/faiss)
 [![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg)](https://www.php.net/)
 [![MySQL 8.0+](https://img.shields.io/badge/MySQL-8.0%2B-4479A1.svg)](https://www.mysql.com/)
+[![Video Demo](https://img.shields.io/badge/YouTube-Video%20Demo-red.svg?logo=youtube)](https://youtu.be/N8_rTYncw5M)
 
 **MediSA** (also referred to as **MediAI**) is an intelligent, full-stack medical decision-support and healthcare triage platform designed to address early-stage pre-consultation confusion and healthcare access bottlenecks in Bangladesh.
 
 The platform combines **LangGraph conversational orchestration**, **multi-turn patient state tracking**, **weighted differential diagnosis ranking**, **supportive computer vision for skin/wound symptoms**, **automated prescription OCR**, and an advanced **Federated Retrieval-Augmented Generation (FRAG)** research architecture that compares traditional centralized retrieval against privacy-preserving, multi-hospital federated retrieval.
+
+---
+
+## 🎬 Video Demo
+
+[![MediSA — Intelligent Health Assistant Demo](https://img.youtube.com/vi/N8_rTYncw5M/maxresdefault.jpg)](https://youtu.be/N8_rTYncw5M)
+
+> 📺 **Watch the Walkthrough:** [MediSA — Intelligent Health Assistant Demo on YouTube](https://youtu.be/N8_rTYncw5M)
 
 ---
 
@@ -212,6 +221,7 @@ That's it! Docker will automatically:
 - 👤 **Sign In**: [http://localhost:3000/pages/login.html](http://localhost:3000/pages/login.html) (`john.doe@example.com` / `password123`)
 - 🔬 **Research Evaluation (RAG vs FRAG)**: [http://localhost:3000/pages/research-evaluation.html](http://localhost:3000/pages/research-evaluation.html)
 - 📄 **FastAPI OpenAPI Docs**: [http://localhost:8005/docs](http://localhost:8005/docs)
+- 🎥 **Video Demo Walkthrough**: [Watch on YouTube](https://youtu.be/N8_rTYncw5M)
 
 To stop the containers:
 ```bash
