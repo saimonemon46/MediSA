@@ -1,10 +1,10 @@
 // ============================================================
-// MediAI — Symptom Chat JS
+// MediAI - Symptom Chat JS
 // Manages LangGraph multi-step AI conversation
 // ============================================================
 
-const AI_BASE = "http://localhost:8000";
-const PHP_BASE = "http://localhost/backend_php";
+const AI_BASE = window.location.port === '3000' ? (window.location.origin + '/api-ai') : 'http://localhost:8000';
+const PHP_BASE = "../../backend_php";
 
 let sessionId = null;
 let stage = "initial"; // initial | followup | analysis | done
@@ -12,7 +12,9 @@ let followupAnswers = [];
 let primarySymptom = "";
 let currentReport = null;
 let selectedImageFile = null;
-let imageAnalysis = null;
+let selectedImageUrl = "";
+let symptomImageAnalyses = [];
+let chatHistory = []; // stores [{"role": "user/ai", "content": "..."}]
 
 function getUser() {
   try {
@@ -36,7 +38,7 @@ function setStage(s) {
   const labels = {
     initial: "Describe your symptoms",
     followup: "Answering questions",
-    analysis: "Analysing…",
+    analysis: "Analysing...",
     done: "Report ready",
   };
   document.getElementById("stageLabel").textContent = labels[s] || s;
@@ -83,51 +85,156 @@ function removeTyping() {
 }
 
 function escHtml(t) {
-  return String(t ?? "")
+  return String(t)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
-function buildConversationContext() {
-  const questions = window._questions || [];
-  return questions
-    .map((question, i) => ({
-      question,
-      answer: followupAnswers[i] || "",
-    }))
-    .filter((item) => item.question || item.answer);
+function handleImageSelection(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+    addMessage("Please attach a JPG, PNG, or WEBP image.", "ai");
+    event.target.value = "";
+    return;
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    addMessage(
+      "That image is larger than 8MB. Please attach a smaller photo.",
+      "ai",
+    );
+    event.target.value = "";
+    return;
+  }
+  if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
+  selectedImageFile = file;
+  selectedImageUrl = URL.createObjectURL(file);
+  document.getElementById("imagePreview").src = selectedImageUrl;
+  document.getElementById("imageFileName").textContent = file.name;
+  const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+  const meta = document.getElementById("imageFileMeta");
+  if (meta) meta.textContent = `${sizeMb}MB image ready to send`;
+  document.getElementById("imageChip").classList.add("visible");
 }
 
-function cacheTriageAssessment(report) {
-  sessionStorage.setItem(
-    "mediai_last_assessment",
-    JSON.stringify({
-      source: "symptom_chat",
-      saved_at: new Date().toISOString(),
-      primary_symptom: primarySymptom,
-      conversation: buildConversationContext(),
-      report,
-    }),
-  );
+function clearSelectedImage() {
+  selectedImageFile = null;
+  if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
+  selectedImageUrl = "";
+  document.getElementById("symptomImageInput").value = "";
+  document.getElementById("imageChip").classList.remove("visible");
+  document.getElementById("imagePreview").removeAttribute("src");
+  const meta = document.getElementById("imageFileMeta");
+  if (meta) meta.textContent = "Ready to send with your message";
 }
 
-function reportDoctorLink(r) {
-  const params = new URLSearchParams();
-  if (r.recommended_specialist)
-    params.set("specialization", r.recommended_specialist);
-  if (primarySymptom) params.set("symptom", primarySymptom);
-  if (r.possible_condition) params.set("condition", r.possible_condition);
-  if (r.urgency) params.set("urgency", r.urgency);
-  const conversationText = buildConversationContext()
-    .map((item) => `${item.question} ${item.answer}`.trim())
-    .join(" ");
-  const reportText = [r.reasoning, r.guidance, r.explanation, conversationText]
+function addImageMessage(file, sender) {
+  const box = document.getElementById("chatMessages");
+  const div = document.createElement("div");
+  div.className = sender === "ai" ? "msg msg-ai" : "msg msg-user";
+  const url = URL.createObjectURL(file);
+  div.innerHTML = `
+    ${sender === "ai" ? '<div class="msg-label">MediAI</div>' : ""}
+    <div style="font-size:12px;margin-bottom:8px">${sender === "ai" ? "Image received" : "Attached image"}</div>
+    <img src="${url}" alt="Uploaded symptom image" style="max-width:220px;max-height:180px;border-radius:8px;display:block;object-fit:cover">
+  `;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function formatImageAnalysisForAnswer(analysis) {
+  const observations = Array.isArray(analysis?.visible_observations)
+    ? analysis.visible_observations.join("; ")
+    : "";
+  const redFlags = Array.isArray(analysis?.red_flags)
+    ? analysis.red_flags.join("; ")
+    : "";
+  return [
+    `Uploaded image observations: type=${analysis?.image_type || "unclear"}`,
+    observations ? `visible observations=${observations}` : "",
+    analysis?.possible_relevance
+      ? `possible relevance=${analysis.possible_relevance}`
+      : "",
+    redFlags ? `visual red flags=${redFlags}` : "",
+    analysis?.confidence ? `image confidence=${analysis.confidence}` : "",
+    "The image should be used as supportive context only, not as a definitive diagnosis.",
+  ]
     .filter(Boolean)
-    .join(" ")
-    .slice(0, 900);
-  if (reportText) params.set("report_text", reportText);
-  return `doctors.html?${params.toString()}`;
+    .join(". ");
+}
+
+function imageAnalysisSummary(analysis) {
+  const observations =
+    Array.isArray(analysis?.visible_observations) &&
+    analysis.visible_observations.length
+      ? analysis.visible_observations.join("\n- ")
+      : "No detailed visual observations were available.";
+  const redFlags =
+    Array.isArray(analysis?.red_flags) && analysis.red_flags.length
+      ? "\n\nVisual red flags noted:\n- " + analysis.red_flags.join("\n- ")
+      : "";
+  return `I reviewed the uploaded image as supportive triage context only.\n\nImage type: ${analysis?.image_type || "unclear"}\nVisible observations:\n- ${observations}${redFlags}\n\nA clinician should review the area directly if symptoms are worsening, spreading, painful, draining pus, or accompanied by fever.`;
+}
+
+async function analyzeSelectedImage() {
+  if (!selectedImageFile) return null;
+  const file = selectedImageFile;
+  addImageMessage(file, "user");
+  clearSelectedImage();
+  addTyping();
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(AI_BASE + "/analyze-symptom-image-for-triage", {
+      method: "POST",
+      body: fd,
+    });
+    const data = await res.json();
+
+    // Also upload to PHP for permanent storage
+    try {
+      const phpFd = new FormData();
+      phpFd.append("document", file);
+      phpFd.append("user_id", getUser()?.id || 1);
+      const phpRes = await fetch(PHP_BASE + "/api/upload.php", {
+        method: "POST",
+        body: phpFd,
+      });
+      const phpData = await phpRes.json();
+      if (phpRes.ok && phpData.success) {
+        data.image_path = phpData.path;
+      }
+    } catch (phpErr) {
+      console.warn("Failed to persist image to backend:", phpErr);
+    }
+
+    removeTyping();
+    if (!res.ok) throw new Error(data.detail || "Could not analyze the image.");
+    symptomImageAnalyses.push(data);
+    addMessage(imageAnalysisSummary(data), "ai");
+    return data;
+  } catch (err) {
+    removeTyping();
+    const fallback = {
+      image_type: "unclear",
+      visible_observations: [
+        "Image was attached, but automatic image analysis was unavailable.",
+      ],
+      possible_relevance:
+        "The image should still be mentioned to a clinician during assessment.",
+      red_flags: [],
+      confidence: "low",
+      needs_clinician_review: true,
+    };
+    symptomImageAnalyses.push(fallback);
+    addMessage(
+      err?.message ||
+        "I could not analyze the image automatically, but I will include that an image was uploaded.",
+      "ai",
+    );
+    return fallback;
+  }
 }
 
 function setSendDisabled(v) {
@@ -138,18 +245,25 @@ function setSendDisabled(v) {
 async function sendMessage() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && !selectedImageFile) return;
   input.value = "";
   input.style.height = "auto";
-  addMessage(text, "user");
+  if (text) addMessage(text, "user");
   setSendDisabled(true);
 
+  const imageAnalysis = await analyzeSelectedImage();
+  const imageAnswer = imageAnalysis
+    ? formatImageAnalysisForAnswer(imageAnalysis)
+    : "";
+
   if (stage === "initial") {
-    primarySymptom = text;
-    await startSession(text);
+    primarySymptom =
+      [text, imageAnswer].filter(Boolean).join("\n\n") ||
+      "Uploaded symptom image for assessment";
+    await startSession(primarySymptom);
   } else if (stage === "followup") {
-    followupAnswers.push(text);
-    await submitAnswer(text);
+    const answer = [text, imageAnswer].filter(Boolean).join("\n\n");
+    await submitAnswer(answer);
   }
 }
 
@@ -166,38 +280,32 @@ async function startSession(symptomText) {
       }),
     });
     const data = await res.json();
+    if (!res.ok)
+      throw new Error(data.detail || "Failed to start the symptom session.");
+
     removeTyping();
+    
     sessionId = data.session_id;
+    chatHistory = data.chat_history || [];
     document.getElementById("sessionId").textContent = "#" + sessionId;
 
-    // Ask first follow-up question
-    if (data.questions && data.questions.length > 0) {
-      const intro =
-        "Thank you. To give you a better assessment, I have a few questions:\n\n" +
-        data.questions[0];
-      addMessage(intro, "ai");
-      window._questions = data.questions;
-      window._qIdx = 0;
-    } else {
-      addMessage(
-        "I've gathered initial information. Let me analyse your symptoms now.",
-        "ai",
-      );
+    if (data.is_medical === false) {
+      addMessage(data.message || "I'm here to help with health concerns. Please describe any symptoms you're experiencing.", "ai");
+      setStage("initial");
+      setSendDisabled(false);
+      return;
+    }
+
+    addMessage(data.message, "ai");
+    
+    if (data.is_complete) {
+      setStage("analysis");
       await generateReport();
     }
   } catch (err) {
     removeTyping();
-    // Offline demo fallback
-    sessionId = "demo-" + Date.now();
-    document.getElementById("sessionId").textContent = "#" + sessionId;
-    window._questions = [
-      "How long have you had these symptoms?",
-      "On a scale of 1–10, how would you rate the severity?",
-      "Do you have any fever or chills?",
-    ];
-    window._qIdx = 0;
     addMessage(
-      "Thank you. I have a few follow-up questions:\n\n" + window._questions[0],
+      err?.message || "I could not start the symptom session. Please try again.",
       "ai",
     );
   }
@@ -205,21 +313,42 @@ async function startSession(symptomText) {
 }
 
 async function submitAnswer(answer) {
-  window._qIdx = (window._qIdx || 0) + 1;
-  const questions = window._questions || [];
+  addTyping();
+  try {
+    const res = await fetch(AI_BASE + "/process-message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        message: answer,
+        user_id: getUser()?.id || 1,
+        chat_history: chatHistory,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to process message.");
 
-  if (window._qIdx < questions.length) {
-    addMessage(questions[window._qIdx], "ai");
-    setSendDisabled(false);
-  } else {
-    // All questions answered — generate report
-    setStage("analysis");
+    removeTyping();
+    chatHistory = data.chat_history || [];
+    
+    addMessage(data.message, "ai");
+
+    if (data.is_complete) {
+      setStage("analysis");
+      addMessage(
+        "Thank you for your cooperation. Analysing all the information we've gathered...",
+        "ai",
+      );
+      await generateReport();
+    }
+  } catch (err) {
+    removeTyping();
     addMessage(
-      "Thank you for your answers. Analysing your symptoms now…",
+      err?.message || "I had trouble understanding that. Could you try again?",
       "ai",
     );
-    await generateReportWithImage();
   }
+  setSendDisabled(false);
 }
 
 async function generateReport() {
@@ -233,44 +362,122 @@ async function generateReport() {
       body: JSON.stringify({
         session_id: sessionId,
         symptom: primarySymptom,
-        answers: followupAnswers,
+        answers: chatHistory.filter(m => m.role === "user").map(m => m.content),
+        chat_history: chatHistory,
         user_id: getUser()?.id || 1,
+        image_analysis: symptomImageAnalyses.length
+          ? symptomImageAnalyses[0]
+          : null,
       }),
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to generate report.");
+
+    const saved = await persistReport(data.report);
+
     removeTyping();
-    currentReport = data.report;
+    currentReport = { ...data.report, report_id: saved.report_id };
+    cacheAssessment(currentReport);
     displayReportReady(data.report);
-  } catch {
+  } catch (err) {
     removeTyping();
-    // Demo report
-    currentReport = {
-      possible_condition: "Viral Upper Respiratory Infection",
-      urgency: "medium",
-      symptoms_listed: [primarySymptom, ...followupAnswers.slice(0, 2)],
-      reasoning:
-        "The symptoms you described — including the onset, severity, and pattern — are consistent with a viral upper respiratory infection. This is grounded in the retrieved medical knowledge base which links these symptom patterns to common viral infections.",
-      recommended_specialist: "General Physician",
-      guidance:
-        "Rest, stay hydrated, and monitor your temperature. If fever exceeds 39°C or symptoms worsen significantly within 48 hours, seek immediate medical attention. You may take paracetamol for fever and pain relief.",
-      generated_at: new Date().toISOString(),
-    };
-    displayReportReady(currentReport);
+    addMessage(
+      err?.message ||
+        "I could not generate or save the report just now. Please try again.",
+      "ai",
+    );
+    setStage("followup");
+    setSendDisabled(false);
   }
+}
+
+async function persistReport(report) {
+  const payload = {
+    user_id: getUser()?.id || 1,
+    session_id: sessionId,
+    possible_condition: report?.possible_condition || "",
+    urgency: report?.urgency || "medium",
+    recommended_specialist: report?.recommended_specialist || "",
+    reasoning: report?.reasoning || "",
+    guidance: report?.guidance || "",
+    explanation: report?.explanation || "",
+    symptoms_listed: Array.isArray(report?.symptoms_listed)
+      ? report.symptoms_listed
+      : [primarySymptom, ...followupAnswers].filter(Boolean),
+    image_path: symptomImageAnalyses.length
+      ? symptomImageAnalyses[0].image_path || null
+      : null,
+    image_analysis: symptomImageAnalyses.length
+      ? symptomImageAnalyses[0]
+      : null,
+  };
+
+  const saveRes = await fetch(PHP_BASE + "/api/reports.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!saveRes.ok) {
+    throw new Error(
+      `Failed to save report: ${saveRes.status} ${saveRes.statusText}`,
+    );
+  }
+  const saveData = await saveRes.json();
+  if (!saveData.success) {
+    throw new Error(saveData.message || "Failed to save report.");
+  }
+  return saveData;
+}
+
+function cacheAssessment(report) {
+  const payload = {
+    source: "symptom-chat",
+    saved_at: new Date().toISOString(),
+    session_id: sessionId,
+    primary_symptom: primarySymptom,
+    answers: followupAnswers,
+    symptom_image_analyses: symptomImageAnalyses,
+    report,
+  };
+  sessionStorage.setItem("mediai_last_assessment", JSON.stringify(payload));
+}
+
+function reportContextText(report) {
+  return [
+    report?.reasoning || "",
+    report?.guidance || "",
+    report?.explanation || "",
+    Array.isArray(report?.symptoms_listed)
+      ? report.symptoms_listed.join(", ")
+      : "",
+    followupAnswers.join(", "),
+    symptomImageAnalyses.map(formatImageAnalysisForAnswer).join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function doctorLinkForReport(report) {
+  const params = new URLSearchParams();
+  if (report?.recommended_specialist)
+    params.set("specialization", report.recommended_specialist);
+  if (primarySymptom) params.set("symptom", primarySymptom);
+  if (report?.possible_condition)
+    params.set("condition", report.possible_condition);
+  if (report?.urgency) params.set("urgency", report.urgency);
+  const context = reportContextText(report).slice(0, 700);
+  if (context) params.set("report_text", context);
+  return `doctors.html?${params.toString()}`;
 }
 
 function displayReportReady(report) {
   setStage("done");
-  cacheTriageAssessment(report);
-  const urgencyClass =
-    { high: "badge-high", medium: "badge-medium", low: "badge-low" }[
-      report.urgency
-    ] || "badge-medium";
-  const msg = `Your triage report is ready.\n\nPossible condition: ${report.possible_condition}\nUrgency: ${report.urgency?.toUpperCase()}\nRecommended specialist: ${report.recommended_specialist}\n\nClick "View Report" for the full analysis and relevant doctor suggestions.`;
+  const msg = `Your triage report is ready.\n\nPossible condition: ${report.possible_condition}\nUrgency: ${report.urgency?.toUpperCase()}\nRecommended specialist: ${report.recommended_specialist}\n\nClick "View Report" for the full analysis.`;
   addMessage(msg, "ai");
   document.getElementById("viewReportBtn").style.display = "inline-block";
   setSendDisabled(false);
   renderReportPanel(report);
+  loadDoctorSuggestions(report);
 }
 
 function renderReportPanel(r) {
@@ -281,39 +488,34 @@ function renderReportPanel(r) {
   const symptoms = Array.isArray(r.symptoms_listed)
     ? r.symptoms_listed.map((s) => `<li>${escHtml(s)}</li>`).join("")
     : `<li>${escHtml(primarySymptom)}</li>`;
-
-  let imageAnalysisHtml = "";
-  if (r.image_analysis) {
-    const img = r.image_analysis;
-    const obsText =
-      Array.isArray(img.visible_observations) &&
-      img.visible_observations.length > 0
-        ? `<li>${img.visible_observations.map((o) => escHtml(o)).join("</li><li>")}</li>`
-        : "<li>No specific observations noted</li>";
-    const redFlagsHtml =
-      Array.isArray(img.red_flags) && img.red_flags.length > 0
-        ? `<li>${img.red_flags.map((f) => escHtml(f)).join("</li><li>")}</li>`
-        : "<li>No red flags identified</li>";
-
-    imageAnalysisHtml = `
-    <div class="report-section" style="background:#f5fffe;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px">
-      <h4 style="color:var(--teal);margin-top:0">📷 Image Analysis Results</h4>
-      <p><strong>Image Type:</strong> ${escHtml(img.image_type || "Unknown")}</p>
-      <p><strong>Confidence:</strong> ${escHtml(img.confidence || "Low")}</p>
-      <p><strong>Visible Observations:</strong></p>
-      <ul class="symptoms-list" style="margin:8px 0">${obsText}</ul>
-      <p><strong>Red Flags:</strong></p>
-      <ul class="symptoms-list" style="margin:8px 0">${redFlagsHtml}</ul>
-      <p style="font-size:11px;color:var(--ink-muted);margin:12px 0 0">
-        <strong>⚠️ Disclaimer:</strong> Image analysis is supportive only. Professional medical evaluation is required for diagnosis.
-      </p>
-    </div>`;
-  }
+  const imgAnalysis =
+    r.image_analysis ||
+    (symptomImageAnalyses.length ? symptomImageAnalyses[0] : null);
+  const imageSection = imgAnalysis
+    ? `
+    <div class="report-section">
+      <h4>Uploaded image review</h4>
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        ${
+          imgAnalysis.image_path
+            ? `
+          <img src="${PHP_BASE}/${imgAnalysis.image_path}" alt="Symptom Image" style="max-width:100%;max-height:250px;border-radius:8px;margin-bottom:12px;display:block;border:1px solid var(--border)">
+        `
+            : ""
+        }
+        <div style="font-weight:500">${escHtml(imgAnalysis.image_type || "Symptom image")}</div>
+        <p>${escHtml((imgAnalysis.visible_observations || []).join(" ") || imgAnalysis.possible_relevance || "Image was included as supportive context.")}</p>
+        ${(imgAnalysis.red_flags || []).length ? `<p style="color:var(--red-danger);font-weight:500">Red flags: ${escHtml(imgAnalysis.red_flags.join(", "))}</p>` : ""}
+        <p class="text-muted">Confidence: ${escHtml(imgAnalysis.confidence || "low")}. Clinician review recommended.</p>
+      </div>
+    </div>
+  `
+    : "";
 
   document.getElementById("reportContent").innerHTML = `
     <div class="report-header" style="margin:-28px -28px 24px;padding:24px 28px;background:var(--teal);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.7;margin-bottom:8px">Triage Report</div>
-      <div class="condition-name" style="color:#fff">${escHtml(r.possible_condition || "–")}</div>
+      <div class="condition-name" style="color:#fff">${escHtml(r.possible_condition || "-")}</div>
       <div style="margin-top:8px"><span class="badge ${urgencyClass}" style="background:rgba(255,255,255,0.2);color:#fff">${(r.urgency || "medium").toUpperCase()} URGENCY</span></div>
     </div>
 
@@ -322,21 +524,26 @@ function renderReportPanel(r) {
       <ul class="symptoms-list">${symptoms}</ul>
     </div>
 
-    ${imageAnalysisHtml}
+    ${imageSection}
 
     <div class="report-section">
       <h4>AI reasoning</h4>
-      <p>${escHtml(r.reasoning || "–")}</p>
+      <p>${escHtml(r.reasoning || "-")}</p>
     </div>
 
     <div class="report-section">
       <h4>Recommended specialist</h4>
-      <p style="font-weight:500">${escHtml(r.recommended_specialist || "–")}</p>
+      <p style="font-weight:500">${escHtml(r.recommended_specialist || "-")}</p>
+    </div>
+
+    <div class="report-section" id="doctorSuggestions">
+      <h4>Relevant doctors</h4>
+      <p class="text-muted">Loading matched doctors...</p>
     </div>
 
     <div class="report-section">
       <h4>Guidance</h4>
-      <p>${escHtml(r.guidance || "–")}</p>
+      <p>${escHtml(r.guidance || "-")}</p>
     </div>
 
     <div style="font-size:11px;color:var(--ink-muted);margin-top:16px">
@@ -345,15 +552,52 @@ function renderReportPanel(r) {
     </div>
 
     <div style="margin-top:20px">
-      <a href="doctors.html" class="btn-primary" style="display:block;text-align:center;font-size:14px;padding:12px">Find a ${escHtml(r.recommended_specialist || "Doctor")} →</a>
+      <a href="${doctorLinkForReport(r)}" class="btn-primary" style="display:block;text-align:center;font-size:14px;padding:12px">Find a ${escHtml(r.recommended_specialist || "Doctor")} -></a>
     </div>
   `;
-  const doctorLink = document
-    .getElementById("reportContent")
-    .querySelector('a[href="doctors.html"]');
-  if (doctorLink) {
-    doctorLink.href = reportDoctorLink(r);
-    doctorLink.textContent = "Find relevant doctors ->";
+}
+
+async function loadDoctorSuggestions(report) {
+  const el = document.getElementById("doctorSuggestions");
+  if (!el) return;
+  const params = new URLSearchParams();
+  if (report?.recommended_specialist)
+    params.set("specialization", report.recommended_specialist);
+  if (primarySymptom) params.set("symptom", primarySymptom);
+  if (report?.possible_condition)
+    params.set("possible_condition", report.possible_condition);
+  if (report?.urgency) params.set("urgency", report.urgency);
+  params.set("report_text", reportContextText(report).slice(0, 700));
+  params.set("limit", "3");
+
+  try {
+    const res = await fetch(
+      `${AI_BASE}/doctor-recommendation?${params.toString()}`,
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load doctors.");
+    const doctors = data.doctors || [];
+    if (!doctors.length) {
+      el.innerHTML =
+        '<h4>Relevant doctors</h4><p class="text-muted">No doctor matches found yet.</p>';
+      return;
+    }
+    el.innerHTML =
+      "<h4>Relevant doctors</h4>" +
+      doctors
+        .map(
+          (d) => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:500">${escHtml(d.doctor_name)}</div>
+        <div class="text-muted">${escHtml(d.specialization)} | ${escHtml(d.location || "Location not listed")}</div>
+        ${d.match_reason ? `<div class="text-muted">${escHtml(d.match_reason)}</div>` : ""}
+      </div>
+    `,
+        )
+        .join("") +
+      `<a href="${doctorLinkForReport(report)}" class="btn-book" style="margin-top:14px">View and book matched doctors</a>`;
+  } catch {
+    el.innerHTML = `<h4>Relevant doctors</h4><a href="${doctorLinkForReport(report)}" class="btn-book">View matched doctors</a>`;
   }
 }
 
@@ -370,111 +614,3 @@ document.addEventListener("DOMContentLoaded", () => {
   if (el) el.textContent = u ? u.first_name + " " + u.last_name : "Guest";
   setSendDisabled(false);
 });
-
-// ============================================================
-// Image Upload & Analysis Functions
-// ============================================================
-
-function handleImageSelection(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  selectedImageFile = file;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const chip = document.getElementById("imageChip");
-    const preview = document.getElementById("imagePreview");
-    const fileName = document.getElementById("imageFileName");
-    const meta = document.getElementById("imageFileMeta");
-
-    preview.src = reader.result;
-    fileName.textContent = file.name.slice(0, 30);
-    meta.textContent = `${(file.size / 1024).toFixed(1)}KB · Will analyze with this message`;
-    chip.classList.add("visible");
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearSelectedImage() {
-  selectedImageFile = null;
-  imageAnalysis = null;
-  document.getElementById("imageChip").classList.remove("visible");
-  document.getElementById("symptomImageInput").value = "";
-}
-
-async function analyzeSymptomImage(file) {
-  try {
-    const fd = new FormData();
-    fd.append("file", file);
-
-    const res = await fetch(AI_BASE + "/analyze-symptom-image-for-triage", {
-      method: "POST",
-      body: fd,
-    });
-
-    if (!res.ok) {
-      console.error("Image analysis failed:", res.status);
-      return null;
-    }
-
-    return await res.json();
-  } catch (err) {
-    console.error("Image analysis error:", err);
-    return null;
-  }
-}
-
-async function generateReportWithImage() {
-  // Analyze image first if selected
-  if (selectedImageFile && !imageAnalysis) {
-    addMessage("Analyzing your uploaded image...", "ai");
-    imageAnalysis = await analyzeSymptomImage(selectedImageFile);
-
-    if (imageAnalysis) {
-      const obsText =
-        imageAnalysis.visible_observations?.length > 0
-          ? `Observations: ${imageAnalysis.visible_observations.join(", ")}`
-          : "Image analysis complete";
-      addMessage(`Image analysis: ${escHtml(obsText)}`, "ai");
-    }
-  }
-
-  // Now generate the full report including image analysis
-  setSendDisabled(true);
-  addTyping();
-
-  try {
-    const res = await fetch(AI_BASE + "/generate-report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_id: sessionId,
-        symptom: primarySymptom,
-        answers: followupAnswers,
-        user_id: getUser()?.id || 1,
-        image_analysis: imageAnalysis,
-      }),
-    });
-    const data = await res.json();
-    removeTyping();
-    currentReport = data.report;
-    displayReportReady(data.report);
-  } catch (err) {
-    removeTyping();
-    console.error("Report generation error:", err);
-    // Demo report
-    currentReport = {
-      possible_condition: "Viral Upper Respiratory Infection",
-      urgency: "medium",
-      symptoms_listed: [primarySymptom, ...followupAnswers.slice(0, 2)],
-      reasoning:
-        "The symptoms you described — including the onset, severity, and pattern — are consistent with a viral upper respiratory infection. This is grounded in the retrieved medical knowledge base which links these symptom patterns to common viral infections.",
-      recommended_specialist: "General Physician",
-      guidance:
-        "Rest, stay hydrated, and monitor your temperature. If fever exceeds 39°C or symptoms worsen significantly within 48 hours, seek immediate medical attention. You may take paracetamol for fever and pain relief.",
-      image_analysis: imageAnalysis,
-      generated_at: new Date().toISOString(),
-    };
-    displayReportReady(currentReport);
-  }
-}

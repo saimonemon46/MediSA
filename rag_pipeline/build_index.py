@@ -5,9 +5,10 @@
 # from the CSV knowledge base files.
 #
 # Usage:
-#   cd medical_triage
+#   cd MediSA
 #   python rag_pipeline/build_index.py
 #   python rag_pipeline/build_index.py --force   (rebuild)
+#   python rag_pipeline/build_index.py --frag    (build federated hospital indexes)
 # ============================================================
 
 import sys

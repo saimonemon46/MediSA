@@ -4,6 +4,11 @@ Test file for MediSA Healthcare Triage Enhancements
 Tests patient state tracking, memory management, and differential diagnosis ranking
 """
 # -*- coding: utf-8 -*-
+import sys
+import os
+ROOT = os.path.dirname(os.path.abspath(__file__))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 from fastapi_ai.models.patient_state import (
     create_empty_patient_state, has_question_been_asked,

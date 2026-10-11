@@ -1,6 +1,6 @@
 <?php
 // MediAI — Auth: Register
-require_once '../includes/config.php';
+require_once __DIR__ . '/../includes/config.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');

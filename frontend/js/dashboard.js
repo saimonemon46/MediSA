@@ -1,5 +1,5 @@
 // MediAI — Dashboard JS
-const AI_BASE = 'http://localhost:8000';
+const AI_BASE = window.location.port === '3000' ? (window.location.origin + '/api-ai') : 'http://localhost:8000';
 const PHP_BASE = '../../backend_php';
 
 function getUser() { try { return JSON.parse(sessionStorage.getItem('mediai_user')||'null'); } catch { return null; } }

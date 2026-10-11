@@ -3,6 +3,17 @@
 # Main application entry point
 # ============================================================
 
+import os
+import sys
+
+# Ensure both fastapi_ai and project root are in sys.path
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_current_dir)
+if _current_dir not in sys.path:
+    sys.path.insert(0, _current_dir)
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.triage import router as triage_router
@@ -41,14 +52,20 @@ async def root():
         "status": "running",
         "endpoints": [
             "POST /generate-questions",
+            "POST /process-message",
             "POST /generate-report",
+            "POST /submit-answers",
             "POST /analyze-document",
             "POST /analyze-symptom-image",
+            "POST /analyze-symptom-image-for-triage",
             "GET  /doctor-recommendation",
             "POST /doctor-recommendation",
+            "GET  /evaluation/dataset-status",
             "POST /evaluation/compare",
+            "GET  /evaluation/benchmark",
             "POST /evaluation/run",
             "GET  /evaluation/results",
+            "GET  /health",
         ]
     }
 

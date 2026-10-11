@@ -1,6 +1,6 @@
 <?php
 // MediAI — API: Dashboard Stats
-require_once '../includes/config.php';
+require_once __DIR__ . '/../includes/config.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
@@ -15,7 +15,7 @@ $db = getDB();
 $sessions   = $db->prepare('SELECT COUNT(*) FROM symptom_sessions WHERE user_id=?');
 $sessions->execute([$user_id]); $sc = (int)$sessions->fetchColumn();
 
-$reports    = $db->prepare('SELECT COUNT(*) FROM triage_reports WHERE user_id=? AND created_at >= DATE_FORMAT(NOW(),"%%Y-%%m-01")');
+$reports    = $db->prepare('SELECT COUNT(*) FROM triage_reports WHERE user_id=? AND created_at >= DATE_FORMAT(NOW(), "%Y-%m-01")');
 $reports->execute([$user_id]); $rc = (int)$reports->fetchColumn();
 
 $meds       = $db->prepare('SELECT COUNT(*) FROM medication_schedule WHERE user_id=? AND active=1');

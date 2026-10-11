@@ -1,0 +1,42 @@
+# ============================================================
+# MediSA — Web UI & PHP Application Backend Dockerfile
+# ============================================================
+FROM php:8.2-apache
+
+# Install PDO MySQL extension
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Enable Apache modules: rewrite, headers, proxy, proxy_http
+RUN a2enmod rewrite headers proxy proxy_http
+
+WORKDIR /var/www/html
+
+# Copy Frontend and PHP Backend directories
+COPY frontend/ /var/www/html/frontend/
+COPY backend_php/ /var/www/html/backend_php/
+
+# Create root index redirect: http://localhost:3000/ -> /frontend/index.html
+RUN echo '<?php header("Location: /frontend/index.html"); exit; ?>' > /var/www/html/index.php
+
+# Configure Apache virtual host with reverse proxy to ai-service and clean asset rewrites
+RUN echo '<VirtualHost *:80>\n\
+    ServerAdmin webmaster@localhost\n\
+    DocumentRoot /var/www/html\n\
+    ProxyPreserveHost On\n\
+    ProxyPass /api-ai/ http://ai-service:8000/\n\
+    ProxyPassReverse /api-ai/ http://ai-service:8000/\n\
+    RewriteEngine On\n\
+    RewriteRule ^/(pages|css|js|assets)/(.*)$$ /frontend/$1/$2 [L]\n\
+    ErrorLog ${APACHE_LOG_DIR}/error.log\n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
+
+# Create upload directory with proper permissions for Apache (www-data)
+RUN mkdir -p /var/www/html/backend_php/uploads && \
+    chown -R www-data:www-data /var/www/html/backend_php/uploads && \
+    chmod -R 775 /var/www/html/backend_php/uploads
+
+# Configure PHP runtime limits for document uploads
+RUN echo "upload_max_filesize = 25M\npost_max_size = 30M\nmemory_limit = 256M" > /usr/local/etc/php/conf.d/uploads.ini
+
+EXPOSE 80

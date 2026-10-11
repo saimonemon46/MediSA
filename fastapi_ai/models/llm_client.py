@@ -4,11 +4,21 @@
 import os
 import json
 import re
-from dotenv import load_dotenv
-from groq import Groq
-import google.generativeai as genai
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # loads .env
+except ImportError:
+    load_dotenv = None
 
-load_dotenv()  # loads .env
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None
+
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -19,8 +29,10 @@ _groq_client = None
 _gemini_client = None
 
 
-def get_groq_client() -> Groq:
+def get_groq_client():
     global _groq_client
+    if Groq is None:
+        raise RuntimeError("The 'groq' package is not installed. Install with: pip install groq")
     if _groq_client is None:
         _groq_client = Groq(api_key=GROQ_API_KEY)
     return _groq_client
@@ -28,6 +40,8 @@ def get_groq_client() -> Groq:
 
 def get_gemini_client():
     global _gemini_client
+    if genai is None:
+        raise RuntimeError("The 'google-generativeai' package is not installed. Install with: pip install google-generativeai")
     if _gemini_client is None:
         genai.configure(api_key=GEMINI_API_KEY)
         _gemini_client = genai.GenerativeModel(GEMINI_MODEL)

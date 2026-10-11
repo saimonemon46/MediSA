@@ -1,0 +1,43 @@
+# ============================================================
+# MediSA — FastAPI AI Microservice Dockerfile
+# ============================================================
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies (build tools, OpenMP for FAISS, Tesseract OCR)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libgomp1 \
+    tesseract-ocr \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install lightweight CPU-only PyTorch first (much smaller & faster than CUDA wheel)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+# Copy dependencies and install
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY fastapi_ai/ /app/fastapi_ai/
+COPY rag_pipeline/ /app/rag_pipeline/
+COPY test_enhancements.py /app/test_enhancements.py
+COPY .env.example /app/.env.example
+
+# Create directories for persistent vector store and shared upload storage
+RUN mkdir -p /app/vector_store /app/backend_php/uploads
+
+# Copy entrypoint script
+COPY docker/entrypoint-ai.sh /app/entrypoint-ai.sh
+RUN chmod +x /app/entrypoint-ai.sh
+
+EXPOSE 8000
+
+CMD ["/app/entrypoint-ai.sh"]

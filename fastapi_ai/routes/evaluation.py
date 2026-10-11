@@ -1,9 +1,14 @@
 """Research evaluation endpoints that orchestrate MediSA's existing retrieval pipelines."""
 from __future__ import annotations
 import os
+import sys
 import re
 import time
 from typing import Any, Dict, List
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from fastapi import APIRouter, HTTPException
 from models.schemas import EvaluationComparisonRequest
 from rag_pipeline.frag_engine import build_frag_context
