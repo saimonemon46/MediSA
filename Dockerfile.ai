@@ -32,7 +32,7 @@ COPY test_enhancements.py /app/test_enhancements.py
 COPY .env.example /app/.env.example
 
 # Create directories for persistent vector store and shared upload storage
-RUN mkdir -p /app/vector_store /app/backend_php/uploads
+RUN mkdir -p /app/vector_store /app/backend_django/uploads /app/uploads
 
 # Copy entrypoint script
 COPY docker/entrypoint-ai.sh /app/entrypoint-ai.sh

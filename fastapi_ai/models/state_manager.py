@@ -77,31 +77,32 @@ class PatientStateManager:
         if patient_state["symptoms"]:
             lines.append("- Symptoms:")
             for symptom_name, data in patient_state["symptoms"].items():
-                severity = data.get("severity", "unknown")
-                onset = data.get("onset", "unknown")
+                severity = data.get("severity", "unknown") if isinstance(data, dict) else str(data)
+                onset = data.get("onset", "unknown") if isinstance(data, dict) else "unknown"
                 lines.append(f"  • {symptom_name}: {severity} severity, onset {onset}")
         
         if patient_state["risk_factors"]:
             present_factors = [
                 name for name, data in patient_state["risk_factors"].items()
-                if data.get("status") == "present"
+                if (data.get("status") if isinstance(data, dict) else str(data)) == "present"
             ]
             if present_factors:
                 lines.append(f"- Risk Factors Present: {', '.join(present_factors)}")
         
         if patient_state["negative_findings"]:
-            lines.append(f"- Symptoms NOT Present: {', '.join(patient_state['negative_findings'].keys())}")
+            neg_keys = [str(k) for k in (patient_state["negative_findings"].keys() if isinstance(patient_state["negative_findings"], dict) else patient_state["negative_findings"])]
+            lines.append(f"- Symptoms NOT Present: {', '.join(neg_keys)}")
         
         if patient_state["medical_history"]:
             lines.append("- Medical History:")
             for item_name, data in patient_state["medical_history"].items():
-                status = "active" if data.get("active") else "past"
+                status = "active" if (data.get("active") if isinstance(data, dict) else bool(data)) else "past"
                 lines.append(f"  • {item_name} ({status})")
         
         if patient_state["exposure_history"]:
             lines.append("- Known Exposures:")
             for exposure_name, data in patient_state["exposure_history"].items():
-                timing = data.get("timing", "unknown timing")
+                timing = data.get("timing", "unknown timing") if isinstance(data, dict) else str(data)
                 lines.append(f"  • {exposure_name}: {timing}")
         
         if patient_state["asked_questions"]:

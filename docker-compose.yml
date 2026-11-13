@@ -10,7 +10,6 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: mediai_db
     ports:
-      # Exposed on host port 3307 to avoid collisions with any existing host MySQL on 3306
       - "${HOST_DB_PORT:-3307}:3306"
     volumes:
       - medisa_db_data:/var/lib/mysql
@@ -31,29 +30,29 @@ services:
     container_name: medisa_ai
     restart: unless-stopped
     ports:
-      - "${HOST_AI_PORT:-8005}:8000"
+      - "${HOST_AI_PORT:-8000}:8000"
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_VISION_MODEL=${GEMINI_VISION_MODEL:-gemini-2.5-flash-lite}
     volumes:
-      - medisa_uploads:/app/backend_php/uploads
+      - medisa_uploads:/app/backend_django/uploads
       - medisa_vector_store:/app/vector_store
     depends_on:
       db:
         condition: service_healthy
 
   # ------------------------------------------------------------
-  # Web UI & PHP Application Backend (Apache + PHP 8.2)
+  # Django Application Backend (Python 3.12 / REST API)
   # ------------------------------------------------------------
-  web:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile.web
-    container_name: medisa_web
+      dockerfile: Dockerfile.django
+    container_name: medisa_backend
     restart: unless-stopped
     ports:
-      - "${HOST_WEB_PORT:-3000}:80"
+      - "${HOST_DJANGO_PORT:-8082}:8080"
     environment:
       - DB_HOST=db
       - DB_PORT=3306
@@ -62,12 +61,30 @@ services:
       - DB_PASS=password
       - AI_SERVICE_URL=http://ai-service:8000
     volumes:
-      - medisa_uploads:/var/www/html/backend_php/uploads
+      - medisa_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
-      ai-service:
-        condition: service_started
+
+  # ------------------------------------------------------------
+  # Next.js Frontend Web Application (Node.js 20 / React)
+  # ------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.next
+    container_name: medisa_frontend
+    restart: unless-stopped
+    ports:
+      - "${HOST_WEB_PORT:-3000}:3000"
+    environment:
+      - DJANGO_URL=http://backend:8080
+      - AI_URL=http://ai-service:8000
+      - NEXT_PUBLIC_DJANGO_URL=http://localhost:8082
+      - NEXT_PUBLIC_AI_URL=http://localhost:8000
+    depends_on:
+      - backend
+      - ai-service
 
 volumes:
   medisa_db_data:

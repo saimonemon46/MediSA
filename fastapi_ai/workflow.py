@@ -395,11 +395,11 @@ def node_generate_differential_diagnoses(state: TriageState) -> TriageState:
     medical_history = patient_state.get("medical_history", {})
     
     # Format for prompt
-    symptoms_summary = ", ".join([f"{name} ({data.get('severity', 'unknown')})" for name, data in symptoms_present.items()]) or "None recorded"
-    risk_summary = ", ".join([name for name, data in risk_factors.items() if data.get('status') == 'present']) or "None identified"
-    negative_summary = ", ".join(symptoms_absent.keys()) or "None noted"
-    exposure_summary = ", ".join(exposure_history.keys()) or "None mentioned"
-    medical_summary = ", ".join(medical_history.keys()) or "None provided"
+    symptoms_summary = ", ".join([f"{name} ({data.get('severity', 'unknown') if isinstance(data, dict) else data})" for name, data in symptoms_present.items()]) or "None recorded"
+    risk_summary = ", ".join([name for name, data in risk_factors.items() if (data.get('status') if isinstance(data, dict) else str(data)) == 'present']) or "None identified"
+    negative_summary = ", ".join([str(k) for k in (symptoms_absent.keys() if isinstance(symptoms_absent, dict) else symptoms_absent)]) or "None noted"
+    exposure_summary = ", ".join([str(k) for k in (exposure_history.keys() if isinstance(exposure_history, dict) else exposure_history)]) or "None mentioned"
+    medical_summary = ", ".join([str(k) for k in (medical_history.keys() if isinstance(medical_history, dict) else medical_history)]) or "None provided"
     
     # Get preliminary conditions from triage result
     triage_cond = state["triage_result"].get("possible_condition", "Unknown")
@@ -454,7 +454,10 @@ def node_assess_urgency(state: TriageState) -> TriageState:
     
     # Get symptom severity info
     symptoms_present = patient_state.get("symptoms", {})
-    severity_list = [data.get("severity", "moderate") for data in symptoms_present.values()]
+    severity_list = [
+        data.get("severity", "moderate") if isinstance(data, dict) else (str(data) if str(data).lower() in ["mild", "moderate", "severe"] else "moderate")
+        for data in symptoms_present.values()
+    ]
     
     severity_mapping = {"mild": 1, "moderate": 2, "severe": 3, "unknown": 2}
     avg_severity = sum(severity_mapping.get(s.lower(), 2) for s in severity_list) / len(severity_list) if severity_list else 2
@@ -462,7 +465,7 @@ def node_assess_urgency(state: TriageState) -> TriageState:
     red_flags = patient_state.get("red_flags_present", [])
     
     # Format for prompt
-    symptoms_str = ", ".join([f"{name} ({data.get('severity', 'unknown')})" for name, data in symptoms_present.items()]) or "No symptoms"
+    symptoms_str = ", ".join([f"{name} ({data.get('severity', 'unknown') if isinstance(data, dict) else data})" for name, data in symptoms_present.items()]) or "No symptoms"
     red_flags_str = ", ".join(red_flags) if red_flags else "None"
     severity_str = "Severe" if avg_severity >= 3 else ("Moderate" if avg_severity >= 2 else "Mild")
     

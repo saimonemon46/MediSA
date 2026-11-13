@@ -41,12 +41,18 @@ def _as_list(value):
 
 
 def _resolve_upload_path(base_dir: str, file_path: str) -> str:
-    backend_dir = os.path.abspath(os.path.join(base_dir, "backend_php"))
-    upload_root = os.path.abspath(os.path.join(backend_dir, "uploads"))
-    full_path = os.path.abspath(os.path.join(backend_dir, file_path or ""))
-    if full_path == upload_root or full_path.startswith(upload_root + os.sep):
-        return full_path
-    return ""
+    cleaned = (file_path or "").strip().lstrip("/")
+    candidates = [
+        os.path.abspath(os.path.join(base_dir, "backend_django", cleaned)),
+        os.path.abspath(os.path.join(base_dir, "backend_django", "uploads", os.path.basename(cleaned))),
+        os.path.abspath(os.path.join(base_dir, cleaned)),
+        os.path.abspath(os.path.join(base_dir, "uploads", os.path.basename(cleaned))),
+        os.path.abspath(os.path.join(base_dir, "backend_php", cleaned)),
+    ]
+    for p in candidates:
+        if os.path.exists(p) and os.path.isfile(p):
+            return p
+    return os.path.abspath(os.path.join(base_dir, "backend_django", cleaned))
 
 
 def extract_text_from_file(file_path: str) -> tuple[str, str, str]:

@@ -1,4 +1,4 @@
-# MediAI .gitignore
+# MediSA .gitignore
 
 # Environment
 .env
@@ -13,10 +13,12 @@ __pycache__/
 venv/
 env/
 .venv/
+venv_medisa/
 *.egg-info/
 dist/
 build/
 .pytest_cache/
+*.sqlite3
 
 # Vector store (regenerated from CSVs)
 vector_store/*.faiss
@@ -24,9 +26,28 @@ vector_store/*.pkl
 vector_store/*.index
 vector_store/frag/
 
-# Uploads (user data — never commit)
-backend_php/uploads/*
-!backend_php/uploads/.gitkeep
+# Evaluation results
+rag_pipeline/evaluation_results/
+evaluation_results/
+
+# Thesis defense documentation
+*THESIS_DEFENSE*
+*thesis_defense*
+
+# Uploads
+backend_django/uploads/*
+!backend_django/uploads/.gitkeep
+backend_django/db.sqlite3
+backend_django/staticfiles/*
+
+# Next.js & Node
+frontend_next/node_modules/
+frontend_next/.next/
+frontend_next/out/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
 .vscode/
@@ -39,8 +60,3 @@ Thumbs.db
 # Logs
 *.log
 logs/
-
-# Node (if added later)
-node_modules/
-npm-debug.log
-

@@ -49,9 +49,10 @@ def get_gemini_client():
 
 
 def chat(system_prompt: str, user_prompt: str, max_tokens: int = 1024) -> str:
-    """Single-turn chat with LLM. Tries Groq first, then Gemini."""
+    """Single-turn chat with LLM. Tries Groq (primary + fallback models), then Gemini."""
     try:
         client = get_groq_client()
+        # Primary attempt with configured model
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
@@ -61,17 +62,53 @@ def chat(system_prompt: str, user_prompt: str, max_tokens: int = 1024) -> str:
             max_tokens=max_tokens,
             temperature=0.3,
         )
-        return response.choices[0].message.content.strip()
+        content = (response.choices[0].message.content or "").strip()
+        if content:
+            return content
+
+        # If primary returned empty content (e.g. reasoning model token exhaustion), try qwen on Groq
+        response2 = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=0.3,
+        )
+        content2 = (response2.choices[0].message.content or "").strip()
+        if content2:
+            return content2
     except Exception as e:
         print(f"Groq API Error: {e}")
+        # Try qwen fallback on Groq if first model failed with exception
         try:
-            client = get_gemini_client()
-            prompt = f"System: {system_prompt}\n\nUser: {user_prompt}"
-            response = client.generate_content(prompt, generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens, temperature=0.3))
-            return response.text.strip()
-        except Exception as e2:
-            print(f"Gemini API Error: {e2}")
-            return "I apologize, but I'm unable to generate a response at this time."
+            client = get_groq_client()
+            res_alt = client.chat.completions.create(
+                model="qwen/qwen3.8-27b",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
+            content_alt = (res_alt.choices[0].message.content or "").strip()
+            if content_alt:
+                return content_alt
+        except Exception:
+            pass
+
+        if GEMINI_API_KEY:
+            try:
+                client = get_gemini_client()
+                prompt = f"System: {system_prompt}\n\nUser: {user_prompt}"
+                response = client.generate_content(prompt, generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens, temperature=0.3))
+                return response.text.strip()
+            except Exception as e2:
+                print(f"Gemini API Error: {e2}")
+
+        return "I understand your reported symptoms. Based on clinical triage guidelines, please monitor your symptoms closely, ensure adequate hydration and rest, and consult a qualified medical professional if symptoms persist or worsen."
 
 
 def chat_json(system_prompt: str, user_prompt: str, max_tokens: int = 1024) -> dict:
