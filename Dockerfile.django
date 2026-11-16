@@ -22,4 +22,4 @@ RUN mkdir -p /app/uploads /app/staticfiles
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py seed_db && python manage.py runserver 0.0.0.0:8080"]
+CMD ["sh", "-c", "python manage.py migrate && python manage.py seed_db && gunicorn medisa_backend.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 2 --timeout 120"]

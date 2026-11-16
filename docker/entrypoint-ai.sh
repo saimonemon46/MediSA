@@ -12,5 +12,5 @@ else
     echo "[MediSA AI] Existing vector store found."
 fi
 
-echo "[MediSA AI] Starting FastAPI on 0.0.0.0:8000..."
-exec uvicorn fastapi_ai.main:app --host 0.0.0.0 --port 8000
+echo "[MediSA AI] Starting FastAPI on 0.0.0.0:${PORT:-8000}..."
+exec uvicorn fastapi_ai.main:app --host 0.0.0.0 --port ${PORT:-8000}

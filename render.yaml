@@ -1,0 +1,46 @@
+# ============================================================
+# MediSA — Render Blueprint (Infrastructure as Code)
+# Docs: https://render.com/docs/blueprint-spec
+# ============================================================
+services:
+  # ------------------------------------------------------------
+  # FastAPI AI Microservice (Docker)
+  # ------------------------------------------------------------
+  - type: web
+    name: medisa-ai
+    runtime: docker
+    dockerfilePath: ./Dockerfile.ai
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_VISION_MODEL
+        value: gemini-2.5-flash-lite
+      - key: PORT
+        value: 8000
+
+  # ------------------------------------------------------------
+  # Django Application Backend (Docker)
+  # ------------------------------------------------------------
+  - type: web
+    name: medisa-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.django
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /api/doctors/
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: USE_MYSQL
+        value: "False"
+      - key: PORT
+        value: 8080
+      - key: AI_SERVICE_URL
+        sync: false
