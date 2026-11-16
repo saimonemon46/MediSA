@@ -8,6 +8,11 @@ WORKDIR /app
 COPY frontend_next/package*.json ./
 RUN npm install
 
+ARG DJANGO_URL=http://backend:8080
+ARG AI_URL=http://ai-service:8000
+ENV DJANGO_URL=${DJANGO_URL} \
+    AI_URL=${AI_URL}
+
 COPY frontend_next/ ./
 RUN npm run build
 

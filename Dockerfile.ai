@@ -25,9 +25,13 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Pre-download SentenceTransformer embedding model into container image
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+# Copy application code and pre-indexed vector store
 COPY fastapi_ai/ /app/fastapi_ai/
 COPY rag_pipeline/ /app/rag_pipeline/
+COPY vector_store/ /app/vector_store/
 COPY test_enhancements.py /app/test_enhancements.py
 COPY .env.example /app/.env.example
 

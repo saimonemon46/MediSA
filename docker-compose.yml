@@ -37,7 +37,7 @@ services:
       - GEMINI_VISION_MODEL=${GEMINI_VISION_MODEL:-gemini-2.5-flash-lite}
     volumes:
       - medisa_uploads:/app/backend_django/uploads
-      - medisa_vector_store:/app/vector_store
+      - ./vector_store:/app/vector_store
     depends_on:
       db:
         condition: service_healthy
@@ -73,6 +73,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.next
+      args:
+        - DJANGO_URL=http://backend:8080
+        - AI_URL=http://ai-service:8000
     container_name: medisa_frontend
     restart: unless-stopped
     ports:
@@ -89,4 +92,3 @@ services:
 volumes:
   medisa_db_data:
   medisa_uploads:
-  medisa_vector_store:
