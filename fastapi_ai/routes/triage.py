@@ -37,7 +37,8 @@ async def process_message(req: ConversationalRequest):
             message=req.message,
             user_id=req.user_id,
             chat_history=req.chat_history,
-            patient_state=req.patient_state  # NEW: pass patient state
+            patient_state=req.patient_state,
+            image_analysis=req.image_analysis
         )
         return result
     except Exception as e:

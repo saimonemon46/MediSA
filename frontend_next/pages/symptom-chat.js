@@ -32,6 +32,8 @@ export default function SymptomChat() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [imageAnalysis, setImageAnalysis] = useState(null);
+  const [savedImageAnalysis, setSavedImageAnalysis] = useState(null);
+  const [savedImagePreview, setSavedImagePreview] = useState('');
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [report, setReport] = useState(null);
   const [showReportPanel, setShowReportPanel] = useState(false);
@@ -51,7 +53,8 @@ export default function SymptomChat() {
     if (!file) return;
 
     setSelectedImage(file);
-    setImagePreview(URL.createObjectURL(file));
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
     setAnalyzingImage(true);
 
     try {
@@ -66,13 +69,6 @@ export default function SymptomChat() {
       if (res.ok) {
         const data = await res.json();
         setImageAnalysis(data);
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: 'ai',
-            text: `Image received and reviewed: ${data.image_type || 'skin/wound'} concern noted. ${data.possible_relevance || ''}`,
-          },
-        ]);
       }
     } catch {
       console.log('Image uploaded locally for triage review.');
@@ -83,19 +79,44 @@ export default function SymptomChat() {
 
   const handleSend = async (customText = null) => {
     const query = (typeof customText === 'string' ? customText : input).trim();
-    if (!query && !selectedImage) return;
+    if (!query && !selectedImage && !imagePreview) return;
 
-    const userMsg = { sender: 'user', text: query || '(Attached medical image)' };
+    const currentImage = imagePreview;
+    const currentAnalysis = imageAnalysis;
+    const chiefComplaint = query || (currentAnalysis?.image_type && currentAnalysis.image_type !== 'other' && currentAnalysis.image_type !== 'unclear' ? `${currentAnalysis.image_type} condition` : 'Visual symptom presentation');
+
+    if (currentAnalysis) setSavedImageAnalysis(currentAnalysis);
+    if (currentImage) setSavedImagePreview(currentImage);
+
+    const userMsg = {
+      sender: 'user',
+      text: query || (currentImage ? 'Attached medical photo for visual inspection' : ''),
+      image: currentImage || null,
+    };
     const updatedMessages = [...messages, userMsg];
+
+    if (currentAnalysis) {
+      updatedMessages.push({
+        sender: 'ai',
+        text: currentAnalysis.image_type === 'other'
+          ? "I've reviewed the uploaded image. " + (currentAnalysis.possible_relevance || "It does not appear to show typical clinical symptoms.")
+          : `I've analyzed your attached photo with Gemini Vision. I noted observations for ${currentAnalysis.image_type || 'skin/wound condition'}:`,
+        visionAnalysis: currentAnalysis,
+      });
+    }
+
     setMessages(updatedMessages);
     setInput('');
+    setSelectedImage(null);
+    setImagePreview('');
+    setImageAnalysis(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setIsTyping(true);
 
     const u = getUser();
 
     // Turn 1: INITIAL STAGE -> Call /generate-questions
     if (stage === 'initial') {
-      const chiefComplaint = query;
       setPrimarySymptom(chiefComplaint);
 
       try {
@@ -121,7 +142,7 @@ export default function SymptomChat() {
         setStage('followup');
 
         if (data.is_complete) {
-          await triggerReportGeneration(currentSessId, chiefComplaint, [query], data.chat_history, data.patient_state);
+          await triggerReportGeneration(currentSessId, chiefComplaint, [chiefComplaint], data.chat_history, data.patient_state, currentAnalysis);
         }
       } catch (err) {
         setIsTyping(false);
@@ -144,6 +165,7 @@ export default function SymptomChat() {
         role: m.sender === 'ai' ? 'assistant' : 'user',
         content: m.text,
       }));
+      const activeAnalysis = currentAnalysis || imageAnalysis || savedImageAnalysis;
 
       const res = await fetch(`${getAiBase()}/process-message`, {
         method: 'POST',
@@ -154,6 +176,7 @@ export default function SymptomChat() {
           user_id: u?.id || 1,
           chat_history: currentHistory,
           patient_state: patientState,
+          image_analysis: activeAnalysis,
         }),
       });
 
@@ -172,7 +195,7 @@ export default function SymptomChat() {
 
       if (data.is_complete) {
         const answers = updatedMessages.filter((m) => m.sender === 'user').map((m) => m.text);
-        await triggerReportGeneration(currentSessId, primarySymptom || query, answers, data.chat_history || currentHistory, data.patient_state);
+        await triggerReportGeneration(currentSessId, primarySymptom || query, answers, data.chat_history || currentHistory, data.patient_state, activeAnalysis);
       }
     } catch (err) {
       setIsTyping(false);
@@ -186,9 +209,11 @@ export default function SymptomChat() {
     }
   };
 
-  const triggerReportGeneration = async (sessId, chiefComplaint, answersList, history, pState) => {
+  const triggerReportGeneration = async (sessId, chiefComplaint, answersList, history, pState, imgAnalysis = null) => {
     setIsTyping(true);
     setStage('analysis');
+
+    const activeImageAnalysis = imgAnalysis || imageAnalysis || savedImageAnalysis;
 
     const u = getUser();
     try {
@@ -201,7 +226,7 @@ export default function SymptomChat() {
           answers: answersList || messages.filter((m) => m.sender === 'user').map((m) => m.text),
           chat_history: history || messages.map((m) => ({ role: m.sender === 'ai' ? 'assistant' : 'user', content: m.text })),
           user_id: u?.id || 1,
-          image_analysis: imageAnalysis,
+          image_analysis: activeImageAnalysis,
           patient_state: pState || patientState,
         }),
       });
@@ -229,7 +254,8 @@ export default function SymptomChat() {
             guidance: finalReport.guidance || '',
             explanation: finalReport.explanation || '',
             symptoms_listed: finalReport.symptoms_listed || [chiefComplaint],
-            image_analysis: imageAnalysis,
+            image_analysis: activeImageAnalysis,
+            image_path: savedImagePreview || null,
           }),
         });
       } catch (saveErr) {
@@ -322,7 +348,115 @@ export default function SymptomChat() {
           {messages.map((m, idx) => (
             <div key={idx} className={m.sender === 'ai' ? 'msg msg-ai' : 'msg msg-user'}>
               {m.sender === 'ai' && <div className="msg-label">MediSA AI</div>}
-              <div>{m.text}</div>
+              {m.image && (
+                <div style={{ marginBottom: m.text ? '8px' : '0' }}>
+                  <img
+                    src={m.image}
+                    alt="Symptom upload"
+                    style={{
+                      maxWidth: '240px',
+                      maxHeight: '200px',
+                      borderRadius: '10px',
+                      objectFit: 'cover',
+                      display: 'block',
+                      border: m.sender === 'user' ? '2px solid rgba(255,255,255,0.7)' : '1px solid #cbd5e1',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => window.open(m.image, '_blank')}
+                    title="Click to view full image"
+                  />
+                </div>
+              )}
+              {m.text && <div style={{ wordBreak: 'break-word' }}>{m.text}</div>}
+              {m.visionAnalysis && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '13px',
+                    color: '#1e293b',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 600, color: '#0f766e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      👁️ Gemini Vision Findings
+                    </span>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        background:
+                          m.visionAnalysis.assessment_flag === 'red'
+                            ? '#fee2e2'
+                            : m.visionAnalysis.assessment_flag === 'yellow'
+                            ? '#fef3c7'
+                            : '#dcfce7',
+                        color:
+                          m.visionAnalysis.assessment_flag === 'red'
+                            ? '#dc2626'
+                            : m.visionAnalysis.assessment_flag === 'yellow'
+                            ? '#d97706'
+                            : '#16a34a',
+                      }}
+                    >
+                      {m.visionAnalysis.assessment_flag === 'red'
+                        ? '⚠️ Urgent Attention'
+                        : m.visionAnalysis.assessment_flag === 'yellow'
+                        ? '⚡ Clinical Review Recommended'
+                        : '✓ Low Concern'}
+                    </span>
+                  </div>
+
+                  {m.visionAnalysis.image_type && (
+                    <div style={{ marginBottom: '6px', color: '#475569' }}>
+                      <strong>Identified Area/Type:</strong>{' '}
+                      <span style={{ textTransform: 'capitalize' }}>{m.visionAnalysis.image_type}</span>
+                      {m.visionAnalysis.confidence && ` • Confidence: ${m.visionAnalysis.confidence}`}
+                    </div>
+                  )}
+
+                  {m.visionAnalysis.visible_observations?.length > 0 && (
+                    <div style={{ marginBottom: '6px' }}>
+                      <strong style={{ color: '#334155' }}>Visual Observations:</strong>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0, color: '#475569' }}>
+                        {m.visionAnalysis.visible_observations.map((obs, i) => (
+                          <li key={i}>{obs}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {m.visionAnalysis.possible_relevance && (
+                    <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', marginTop: '6px' }}>
+                      {m.visionAnalysis.possible_relevance}
+                    </div>
+                  )}
+
+                  {m.visionAnalysis.red_flags?.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        fontSize: '12px',
+                        color: '#b91c1c',
+                        fontWeight: 500,
+                      }}
+                    >
+                      🚨 Red Flags: {m.visionAnalysis.red_flags.join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
 
@@ -354,20 +488,95 @@ export default function SymptomChat() {
           </div>
         )}
 
-        {/* Attachment preview */}
+        {/* Attachment preview bar */}
         {imagePreview && (
-          <div style={{ padding: '8px 24px', background: '#fff', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={imagePreview} alt="Symptom preview" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
-            <div style={{ fontSize: '13px' }}>
-              <strong>Attached photo:</strong> {selectedImage?.name} {analyzingImage && ' (Analyzing...)'}
+          <div
+            style={{
+              padding: '10px 24px',
+              background: '#f8fafc',
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+            }}
+          >
+            <div style={{ position: 'relative' }}>
+              <img
+                src={imagePreview}
+                alt="Symptom preview"
+                style={{
+                  width: '52px',
+                  height: '52px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                }}
+              />
+              {analyzingImage && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.45)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontSize: '12px',
+                  }}
+                >
+                  ⏳
+                </div>
+              )}
             </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--ink)',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {selectedImage?.name || 'Attached Symptom Photo'}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                {analyzingImage ? (
+                  <span style={{ color: 'var(--teal)', fontWeight: 500 }}>
+                    🔍 Analyzing with Gemini Vision...
+                  </span>
+                ) : imageAnalysis ? (
+                  <span style={{ color: '#16a34a', fontWeight: 500 }}>
+                    ✓ Gemini Vision Ready ({imageAnalysis.image_type || 'reviewed'})
+                  </span>
+                ) : (
+                  <span>Ready to attach</span>
+                )}
+              </div>
+            </div>
+
             <button
+              type="button"
               onClick={() => {
                 setSelectedImage(null);
                 setImagePreview('');
                 setImageAnalysis(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
               }}
-              style={{ background: 'none', border: 'none', color: 'var(--red-urgent)', cursor: 'pointer', marginLeft: 'auto', fontSize: '13px' }}
+              style={{
+                padding: '6px 12px',
+                color: 'var(--red-urgent)',
+                fontSize: '13px',
+                borderRadius: '6px',
+                border: '1px solid #fecaca',
+                background: '#fff',
+                cursor: 'pointer',
+              }}
             >
               Remove
             </button>
@@ -394,9 +603,21 @@ export default function SymptomChat() {
             onClick={() => fileInputRef.current?.click()}
             className="btn-ghost"
             title="Attach skin or wound image"
-            style={{ padding: '10px 14px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{
+              padding: '10px 14px',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: imagePreview ? '1px solid var(--teal)' : '1px solid var(--border)',
+              background: imagePreview ? 'var(--teal-light)' : '#fff',
+              color: imagePreview ? 'var(--teal)' : 'inherit',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
           >
-            📷 <span>Photo</span>
+            📷 <span style={{ fontWeight: 500 }}>{imagePreview ? 'Photo Ready' : 'Photo'}</span>
           </button>
 
           <input
@@ -459,6 +680,50 @@ export default function SymptomChat() {
                 </span>
               )}
             </div>
+
+            {/* Visual Assessment from Image (if attached) */}
+            {savedImageAnalysis && (
+              <div
+                style={{
+                  marginBottom: '18px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '14px',
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📷</span> Visual Inspection Findings
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  {savedImagePreview && (
+                    <img
+                      src={savedImagePreview}
+                      alt="Uploaded symptom"
+                      style={{
+                        width: '68px',
+                        height: '68px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        border: '1px solid #cbd5e1',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => window.open(savedImagePreview, '_blank')}
+                      title="Click to view full image"
+                    />
+                  )}
+                  <div style={{ fontSize: '12px', flex: 1 }}>
+                    <div><strong>Type:</strong> <span style={{ textTransform: 'capitalize' }}>{savedImageAnalysis.image_type}</span></div>
+                    {savedImageAnalysis.confidence && <div><strong>Confidence:</strong> {savedImageAnalysis.confidence}</div>}
+                    {savedImageAnalysis.visible_observations?.length > 0 && (
+                      <div style={{ marginTop: '4px', color: '#475569' }}>
+                        {savedImageAnalysis.visible_observations.join(' • ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {report.reasoning && (
               <div className="report-section" style={{ marginBottom: '16px' }}>

@@ -152,10 +152,75 @@ export default function Reports() {
                 </div>
               )}
 
-              {selectedReport.image_analysis && (
-                <div className="report-section mb-16" style={{ background: 'var(--teal-light)', padding: '12px', borderRadius: '8px' }}>
-                  <h4>Skin / Image Analysis</h4>
-                  <p>{typeof selectedReport.image_analysis === 'string' ? selectedReport.image_analysis : JSON.stringify(selectedReport.image_analysis)}</p>
+              {(selectedReport.image_analysis || selectedReport.image_path) && (
+                <div
+                  className="report-section mb-16"
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    padding: '14px',
+                    borderRadius: '10px',
+                  }}
+                >
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', color: 'var(--ink)' }}>
+                    <span>📷</span> Attached Clinical Photo & Vision Findings
+                  </h4>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    {selectedReport.image_path && (
+                      <img
+                        src={selectedReport.image_path}
+                        alt="Symptom photo"
+                        style={{
+                          width: '84px',
+                          height: '84px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          border: '1px solid #cbd5e1',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => window.open(selectedReport.image_path, '_blank')}
+                        title="Click to view full photo"
+                      />
+                    )}
+                    <div style={{ fontSize: '13px', flex: 1, minWidth: '220px' }}>
+                      {typeof selectedReport.image_analysis === 'object' && selectedReport.image_analysis ? (
+                        <>
+                          <div style={{ marginBottom: '6px' }}>
+                            <strong>Type:</strong>{' '}
+                            <span style={{ textTransform: 'capitalize' }}>
+                              {selectedReport.image_analysis.image_type || 'Clinical lesion / finding'}
+                            </span>
+                            {selectedReport.image_analysis.confidence && (
+                              <span style={{ color: 'var(--ink-muted)' }}> • Confidence: {selectedReport.image_analysis.confidence}</span>
+                            )}
+                          </div>
+                          {selectedReport.image_analysis.visible_observations?.length > 0 && (
+                            <div style={{ marginBottom: '6px' }}>
+                              <strong style={{ color: '#334155' }}>Visual Observations:</strong>
+                              <ul style={{ margin: '4px 0 0 16px', padding: 0, color: '#475569' }}>
+                                {selectedReport.image_analysis.visible_observations.map((obs, i) => (
+                                  <li key={i}>{obs}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {selectedReport.image_analysis.possible_relevance && (
+                            <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', marginTop: '6px' }}>
+                              {selectedReport.image_analysis.possible_relevance}
+                            </div>
+                          )}
+                          {selectedReport.image_analysis.red_flags?.length > 0 && (
+                            <div style={{ marginTop: '8px', color: '#dc2626', fontWeight: 600, fontSize: '12px' }}>
+                              🚨 Red Flags: {selectedReport.image_analysis.red_flags.join(', ')}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p style={{ margin: 0 }}>{String(selectedReport.image_analysis || 'Image received and archived.')}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

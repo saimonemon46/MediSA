@@ -98,33 +98,109 @@ def node_input_analysis(state: TriageState) -> TriageState:
 
 
 def node_dynamic_reasoning(state: TriageState) -> TriageState:
-    """V2: Update internal understanding and decide next steps."""
-    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in state["chat_history"]])
+    """V2: Update internal understanding and decide next steps with hard stopping guardrails."""
+    chat_history = state.get("chat_history", [])
+    user_msgs = [m for m in chat_history if m.get("role") in ("user", "human")]
+    turn_count = len(user_msgs)
+    
+    # Check if an image was analyzed by Gemini Vision or uploaded
+    has_image = bool(state.get("image_analysis"))
+    if not has_image:
+        has_image = any(
+            "gemini vision" in m.get("content", "").lower() or
+            "attached" in m.get("content", "").lower() or
+            "photo" in m.get("content", "").lower() or
+            "image" in m.get("content", "").lower()
+            for m in chat_history
+        )
+
+    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in chat_history])
     rag_context = state.get("retrieved_context", "")
     
-    prompt_user = f"Conversation History:\n{history_text}\n\nMedical Context:\n{rag_context}"
+    prompt_user = (
+        f"Total User Turns So Far: {turn_count}\n"
+        f"Image Findings / Photo Upload Present: {has_image}\n\n"
+        f"Conversation History:\n{history_text}\n\n"
+        f"Medical Context:\n{rag_context}"
+    )
     
+    is_complete = False
     try:
         result = chat_json(DYNAMIC_REASONING_SYSTEM, prompt_user)
         state["internal_reasoning"] = result.get("internal_reasoning", "")
-        state["is_complete"] = result.get("is_complete", False)
-        # We can store next_best_question_focus for the next node
+        is_complete = bool(result.get("is_complete", False))
         state["current_question"] = result.get("next_best_question_focus", "") 
     except Exception as e:
         print(f"Error in dynamic reasoning: {e}")
-        state["is_complete"] = len(state.get("user_answers", [])) >= 6
+        state["internal_reasoning"] = "Evaluating standard triage progress."
+        state["current_question"] = ""
+        is_complete = turn_count >= 3
+
+    # =========================================================================
+    # HARD PROGRAMMATIC STOPPING GUARDRAILS
+    # Triage is risk stratification, NOT an endless interrogation loop.
+    # =========================================================================
+    # Rule 1: Under any circumstances, max 4 user turns in conversational triage
+    if turn_count >= 4:
+        is_complete = True
+
+    # Rule 2: If image analysis is present, max 3 user turns
+    if has_image and turn_count >= 3:
+        is_complete = True
+
+    # Rule 3: Check consecutive negative or brief answers
+    # If the user has answered "no" / "none" / "getting worse" repeatedly and turn_count >= 3,
+    # they have given all primary data; finalize immediately.
+    recent_answers = [m["content"].strip().lower() for m in user_msgs[-2:]]
+    if turn_count >= 3 and any(a in ("no", "none", "no.", "nope", "getting worse", "worse") for a in recent_answers):
+        is_complete = True
+
+    # Rule 4: Patient State readiness check if available
+    if state.get("patient_state"):
+        try:
+            sm = PatientStateManager()
+            ps = sm.from_dict(state["patient_state"])
+            readiness = sm.get_conversation_readiness(ps)
+            if readiness.get("is_ready_for_report"):
+                is_complete = True
+        except Exception as e:
+            print(f"Error in patient state readiness check: {e}")
+
+    state["is_complete"] = is_complete
+    if is_complete:
+        state["current_question"] = ""
+
     return state
 
 
 def node_conversational_turn(state: TriageState) -> TriageState:
-    """V2: Generate the empathetic conversational response."""
+    """V2: Generate the empathetic conversational response with concise, natural clinical delivery."""
     history_text = "\n".join([f"{m['role']}: {m['content']}" for m in state["chat_history"]])
     
+    # If triage is already complete, DO NOT ask another question! Wrap up cleanly!
+    if state.get("is_complete"):
+        state["intent_message"] = (
+            "Thank you for providing those details. I have collected sufficient information to assess your condition "
+            "and prepare your triage recommendations. Generating your clinical report now..."
+        )
+        state["current_question"] = ""
+        state["chat_history"].append({"role": "ai", "content": state["intent_message"]})
+        return state
+
     # If there was a validation error, we need to ask for clarification
     if state.get("validation_error"):
-        prompt_user = f"History:\n{history_text}\n\nValidation Error: {state['validation_error']}\n\nTask: Politely ask for clarification regarding the error."
+        prompt_user = (
+            f"History:\n{history_text}\n\n"
+            f"Validation Error: {state['validation_error']}\n\n"
+            f"Task: Politely ask for clarification regarding the error."
+        )
     else:
-        prompt_user = f"History:\n{history_text}\n\nInternal Reasoning: {state.get('internal_reasoning', '')}\n\nFocus: {state.get('current_question', '')}"
+        prompt_user = (
+            f"History:\n{history_text}\n\n"
+            f"Internal Clinical Reasoning: {state.get('internal_reasoning', '')}\n\n"
+            f"Next Question Focus: {state.get('current_question', '')}\n\n"
+            f"Instruction: Be natural, concise, and professional (1-2 sentences). Do NOT repeat 'I'm sorry you're dealing with...' or formulaic 'Knowing whether...' explanations."
+        )
     
     try:
         result = chat_json(CONVERSATIONAL_TURN_SYSTEM, prompt_user)
@@ -135,7 +211,7 @@ def node_conversational_turn(state: TriageState) -> TriageState:
         state["chat_history"].append({"role": "ai", "content": state["intent_message"]})
     except Exception as e:
         print(f"Error in conversational turn: {e}")
-        state["intent_message"] = "I'm sorry, I'm having trouble processing that. Could you tell me more about your symptoms?"
+        state["intent_message"] = "Could you tell me a bit more about how long you've noticed these symptoms?"
     return state
 
 
@@ -238,6 +314,14 @@ def node_rag_retrieval(state: TriageState) -> TriageState:
     query = state["primary_symptom"]
     if state.get("user_answers"):
         query += " " + " ".join(state["user_answers"])
+    if state.get("image_analysis"):
+        img = state["image_analysis"]
+        img_type = img.get("image_type", "")
+        obs = " ".join(img.get("visible_observations", []))
+        if img_type and img_type not in ("other", "unclear"):
+            query += f" {img_type}"
+        if obs:
+            query += f" {obs}"
     try:
         frag = build_frag_context(query, top_k_per_hospital=4, final_top_k=10)
         state["retrieved_context"] = frag["context"]
@@ -299,12 +383,21 @@ def node_generate_questions(state: TriageState) -> TriageState:
 
 
 def node_process_answers(state: TriageState) -> TriageState:
-    """Re-retrieve federated context enriched by answers and conversation history."""
+    """Re-retrieve federated context enriched by answers, conversation history, and image findings."""
     query = state["primary_symptom"]
     if state.get("chat_history"):
         query += " " + " ".join([m["content"] for m in state["chat_history"] if m["role"] == "user"])
     elif state.get("user_answers"):
         query += " " + " ".join(state["user_answers"])
+
+    if state.get("image_analysis"):
+        img = state["image_analysis"]
+        img_type = img.get("image_type", "")
+        obs = " ".join(img.get("visible_observations", []))
+        if img_type and img_type not in ("other", "unclear"):
+            query += f" {img_type}"
+        if obs:
+            query += f" {obs}"
 
     try:
         frag = build_frag_context(query, top_k_per_hospital=5, final_top_k=12)
@@ -340,16 +433,15 @@ def node_triage_engine(state: TriageState) -> TriageState:
     if state.get("image_analysis"):
         image_data = state["image_analysis"]
         image_context = f"""
-Image Analysis Results (for contextual support):
-- Image Type: {image_data.get('image_type', 'Unknown')}
-- Visible Observations: {', '.join(image_data.get('visible_observations', []))}
-- Possible Relevance: {image_data.get('possible_relevance', 'N/A')}
-- Red Flags Noted: {', '.join(image_data.get('red_flags', [])) if image_data.get('red_flags') else 'None'}
-- Image Quality: {image_data.get('image_quality', 'Unknown')}
-- Confidence: {image_data.get('confidence', 'Low')}
-- Disclaimer: Image analysis is supportive only and cannot diagnose a condition. Professional medical evaluation required.
+Clinical Image Visual Extraction (Gemini Vision):
+- Suspected Area/Type: {image_data.get('image_type', 'Unknown')}
+- Visible Findings & Lesions: {', '.join(image_data.get('visible_observations', []))}
+- Clinical Correlation: {image_data.get('possible_relevance', 'N/A')}
+- Visual Red Flags: {', '.join(image_data.get('red_flags', [])) if image_data.get('red_flags') else 'None'}
+- Assessment Urgency: {image_data.get('assessment_flag', 'yellow')}
+CRITICAL INSTRUCTION: You MUST directly synthesize these visual image findings with the reported symptoms when determining the possible condition, differential diagnoses, recommended specialist, and explanation.
 """
-        answers_text += image_context
+        answers_text += "\n\n" + image_context
     
     if state.get("user_answers"):
         image_answers = [a for a in state["user_answers"] if "Uploaded image observations:" in a]
@@ -405,13 +497,28 @@ def node_generate_differential_diagnoses(state: TriageState) -> TriageState:
     triage_cond = state["triage_result"].get("possible_condition", "Unknown")
     preliminary = [triage_cond]
     
-    # Add complementary diagnoses based on symptoms
+    # Add complementary diagnoses based on symptoms and image findings
     if "fever" in symptoms_summary.lower() or "cough" in symptoms_summary.lower():
         preliminary.extend(["COVID-19", "Influenza", "Pneumonia"])
     if "rash" in symptoms_summary.lower():
         preliminary.extend(["Allergic Reaction", "Dermatitis"])
     if "chest pain" in symptoms_summary.lower():
         preliminary.extend(["Myocarditis", "Pleurisy"])
+
+    if state.get("image_analysis"):
+        img = state["image_analysis"]
+        img_type = str(img.get("image_type", "")).lower()
+        obs_text = " ".join(img.get("visible_observations", [])).lower()
+        if "rash" in img_type or "skin" in img_type or "rash" in obs_text or "erythema" in obs_text:
+            preliminary.extend(["Contact Dermatitis", "Urticaria / Allergic Exanthem", "Atopic Eczema", "Cellulitis"])
+        elif "wound" in img_type or "cut" in img_type or "wound" in obs_text or "laceration" in obs_text:
+            preliminary.extend(["Laceration / Soft Tissue Injury", "Superficial Wound Infection", "Abscess"])
+        elif "burn" in img_type or "burn" in obs_text:
+            preliminary.extend(["Thermal Burn Injury", "Partial Thickness Burn"])
+        elif "eye" in img_type or "conjunctiv" in obs_text:
+            preliminary.extend(["Acute Conjunctivitis", "Subconjunctival Hemorrhage"])
+        elif "swelling" in img_type or "edema" in obs_text:
+            preliminary.extend(["Localized Soft Tissue Edema", "Angioedema"])
     
     preliminary = list(set(preliminary))[:5]  # Get unique, top 5
     
@@ -520,11 +627,21 @@ def node_generate_report(state: TriageState) -> TriageState:
     reasoning = r.get("reasoning", "")
     
     # Enrich reasoning with image assessment if available
+    recommended_specialist = r.get("recommended_specialist", "General Physician")
     if state.get("image_analysis"):
         img = state["image_analysis"]
         obs = ", ".join(img.get("visible_observations", []))
-        img_summary = f"\n\nIMAGE ASSESSMENT: The uploaded {img.get('image_type', 'image')} showed {obs or 'no specific findings'}. Relevance: {img.get('possible_relevance', 'N/A')}."
+        img_summary = f"\n\nVISUAL INSPECTION (Gemini Vision): Visual examination of the uploaded {img.get('image_type', 'image')} identified: {obs or 'no specific findings'}. Relevance: {img.get('possible_relevance', 'N/A')}."
         reasoning += img_summary
+
+        # Specialize recommendations based on image findings if still generic
+        img_type = str(img.get("image_type", "")).lower()
+        if ("rash" in img_type or "skin" in img_type or "eczema" in img_type) and recommended_specialist in ("General Physician", "General Practitioner", "General Medicine", "Unknown"):
+            recommended_specialist = "Dermatologist"
+        elif ("eye" in img_type or "vision" in img_type) and recommended_specialist in ("General Physician", "General Practitioner", "General Medicine", "Unknown"):
+            recommended_specialist = "Ophthalmologist"
+        elif ("wound" in img_type or "cut" in img_type or "burn" in img_type) and recommended_specialist in ("General Physician", "General Practitioner", "General Medicine", "Unknown"):
+            recommended_specialist = "General Surgeon / Wound Specialist"
 
     # Build enhanced report with differential diagnoses
     report = {
@@ -532,7 +649,7 @@ def node_generate_report(state: TriageState) -> TriageState:
         "user_id":               state["user_id"],
         "possible_condition":    r.get("possible_condition", "Unknown"),
         "urgency":               r.get("urgency", "medium"),
-        "recommended_specialist":r.get("recommended_specialist", "General Physician"),
+        "recommended_specialist":recommended_specialist,
         "reasoning":             reasoning,
         "guidance":              r.get("guidance", ""),
         "symptoms_listed":       r.get("symptoms_listed", [state["primary_symptom"]]),
@@ -625,7 +742,8 @@ def run_conversational_step(
     message: str,
     user_id: int,
     chat_history: List[dict] = None,
-    patient_state: dict = None
+    patient_state: dict = None,
+    image_analysis: dict = None
 ) -> dict:
     """V2: Run a single turn of the conversational triage."""
     if chat_history is None:
@@ -641,13 +759,17 @@ def run_conversational_step(
     else:
         ps = state_manager.from_dict(patient_state)
     
+    user_answers = [m["content"] for m in chat_history if m.get("role") in ("user", "human")]
+    turn_count = len(user_answers)
+    ps["current_turn"] = turn_count
+
     state: TriageState = {
         "session_id":          session_id,
         "user_id":             user_id,
-        "primary_symptom":     message, # Fallback
+        "primary_symptom":     user_answers[0] if user_answers else message,
         "chat_history":        chat_history,
         "followup_questions":  [],
-        "user_answers":        [],
+        "user_answers":        user_answers,
         "retrieved_context":   "",
         "triage_result":       {},
         "explanation":         "",
@@ -666,6 +788,7 @@ def run_conversational_step(
         "urgency_assessment":  None,
         "conversation_summary": None,
         "frag_retrieval":       None,
+        "image_analysis":      image_analysis,
     }
 
     graph = build_graph()
@@ -679,6 +802,11 @@ def run_conversational_step(
             state = node_dynamic_reasoning(state)
         state = node_conversational_turn(state)
         final_state = state
+
+    # Record question in patient state if asked
+    if final_state.get("current_question"):
+        ps = state_manager.record_question(ps, final_state["current_question"])
+        final_state["patient_state"] = state_manager.to_dict(ps)
 
     return {
         "session_id":     final_state["session_id"],

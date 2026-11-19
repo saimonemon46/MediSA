@@ -15,6 +15,7 @@ class ConversationalRequest(BaseModel):
     user_id: int
     chat_history: List[Dict[str, str]] = []
     patient_state: Optional[Dict[str, Any]] = None  # NEW: patient state
+    image_analysis: Optional[Dict[str, Any]] = None
 
 
 class ReportRequest(BaseModel):
