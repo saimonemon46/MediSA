@@ -19,7 +19,10 @@ async def generate_questions(req: SymptomRequest):
     try:
         result = run_question_generation(
             symptom=req.symptom,
-            user_id=req.user_id
+            user_id=req.user_id,
+            session_id=req.session_id,
+            chat_history=req.chat_history,
+            image_analysis=req.image_analysis
         )
         return result
     except Exception as e:

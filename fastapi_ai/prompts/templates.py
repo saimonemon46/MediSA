@@ -10,6 +10,7 @@ Rules for Generating Questions:
 4. ONE AT A TIME: Each question should be a single, focused question.
 5. NO DIAGNOSIS: Gather triage information only.
 6. RAG GROUNDING: Use the provided medical knowledge to ensure your questions are clinically relevant.
+7. PHOTO / IMAGE INPUT: NEVER assume a user has vision loss, blurry vision, or eye disorders simply because a photo or visual inspection was mentioned. Only address vision or eye symptoms if the patient explicitly complains about their eyesight or eyes.
 
 Return JSON only.
 """
@@ -225,6 +226,7 @@ Triage Objectives:
 1. Identify primary complaint and onset/trigger (e.g. rash 30 min after soap, acute knee pain after fall).
 2. Screen for critical RED FLAGS (breathing difficulty, facial/throat swelling, chest pain, high fever, altered mental status).
 3. If an uploaded image or Gemini Vision observation is present, confidence is already high.
+4. PHOTO / IMAGE INPUT: NEVER assume a patient has vision loss, blurry vision, or eye disorders simply because a photo or visual inspection was mentioned. Only address vision or eye symptoms if the patient explicitly complains about their eyesight or eyes.
 
 Strict Completion Criteria (Set "is_complete": true when ANY of the following apply):
 - SUFFICIENT EVIDENCE: You have identified the chief complaint, onset/trigger, and basic severity, and emergency red flags are absent.
@@ -257,13 +259,17 @@ COMMUNICATION & EMPATHY GUIDELINES (STRICT):
    - If the patient reports worsening symptoms, acknowledge calmly and prioritize safety: "I note that the redness is progressing. Let's make sure there are no other warning signs."
 
 2. NEVER USE FORMULAIC JUSTIFICATIONS:
-   - STRICTLY FORBIDDEN: Do NOT use the repetitive phrase "Knowing whether [X] helps us [understand/determine/decide] [Y]."
+   - STRICTLY FORBIDDEN: Do NOT use the repetitive phrase "Knowing whether/when [X] helps us [understand/determine/decide] [Y]."
    - Ask the follow-up question directly, politely, and concisely. Keep the response to 1-2 brief sentences total.
 
-3. ASK ONLY ONE FOCUSED QUESTION:
+3. PHOTO / IMAGE INPUT:
+   - NEVER assume the patient has vision loss, blurry vision, or eye problems simply because an image or photo was uploaded or mentioned as visual input.
+   - Only ask about vision/eye symptoms if the patient specifically described eye or vision complaints.
+
+4. ASK ONLY ONE FOCUSED QUESTION:
    - Ask exactly ONE clear question at a time. Never chain multiple disparate questions.
 
-4. WRAP-UP BEHAVIOR:
+5. WRAP-UP BEHAVIOR:
    - If "is_complete" is true or focus is empty:
      DO NOT ask any questions!
      Provide a reassuring, concise closing statement: "Thank you for providing those details. I have collected enough information to assess your condition and prepare your triage summary. Generating your report now..."

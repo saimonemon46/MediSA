@@ -140,6 +140,14 @@ def node_dynamic_reasoning(state: TriageState) -> TriageState:
     # HARD PROGRAMMATIC STOPPING GUARDRAILS
     # Triage is risk stratification, NOT an endless interrogation loop.
     # =========================================================================
+    # Rule 0: On turn 1 (initial intake), do NOT conclude triage immediately unless critical emergency red flags exist
+    if turn_count <= 1:
+        has_critical_emergency = False
+        if state.get("patient_state"):
+            has_critical_emergency = bool(state["patient_state"].get("red_flags_present"))
+        if not has_critical_emergency:
+            is_complete = False
+
     # Rule 1: Under any circumstances, max 4 user turns in conversational triage
     if turn_count >= 4:
         is_complete = True
@@ -819,13 +827,20 @@ def run_conversational_step(
     }
 
 
-def run_question_generation(symptom: str, user_id: int, session_id: str = None) -> dict:
-    """Legacy/initial step: starts the conversation."""
+def run_question_generation(
+    symptom: str,
+    user_id: int,
+    session_id: str = None,
+    chat_history: list = None,
+    image_analysis: dict = None
+) -> dict:
+    """Initial step: starts the conversation with optional image and history context."""
     return run_conversational_step(
         session_id=session_id or str(uuid.uuid4())[:8].upper(),
         message=symptom,
         user_id=user_id,
-        chat_history=[]
+        chat_history=chat_history or [],
+        image_analysis=image_analysis
     )
 
 
