@@ -3,6 +3,8 @@ import base64
 import json
 import os
 import re
+import time
+import uuid
 from typing import Any
 
 import httpx
@@ -163,11 +165,31 @@ async def analyze_symptom_image(file: UploadFile = File(...)):
     return _normalise_result(result)
 
 
+def _get_upload_dir() -> str:
+    candidates = [
+        "/app/backend_django/uploads",
+        "/app/uploads",
+        os.path.join(os.getcwd(), "backend_django", "uploads"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend_django", "uploads"),
+        "backend_django/uploads",
+    ]
+    for d in candidates:
+        if os.path.exists(d):
+            return d
+    target = candidates[0] if os.path.exists("/app") else candidates[2]
+    try:
+        os.makedirs(target, exist_ok=True)
+        return target
+    except Exception:
+        return "."
+
+
 @router.post("/analyze-symptom-image-for-triage")
 async def analyze_symptom_image_for_triage(file: UploadFile = File(...)):
     """
     Analyzes a symptom image in the context of medical triage assessment.
     Returns structured analysis to be included in triage reports and assessment recommendations.
+    Saves image persistently to shared uploads for viewing in triage reports.
     """
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Only JPG, PNG, or WEBP symptom images are supported.")
@@ -177,6 +199,21 @@ async def analyze_symptom_image_for_triage(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Uploaded image is empty.")
     if len(image_bytes) > MAX_IMAGE_BYTES:
         raise HTTPException(status_code=400, detail="Image is too large. Maximum size is 8MB.")
+
+    # Save image for persistent report viewing
+    saved_rel_path = None
+    try:
+        dest_dir = _get_upload_dir()
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+            ext = ".jpg"
+        saved_filename = f"symptom_{int(time.time())}_{uuid.uuid4().hex[:8]}{ext}"
+        saved_abs_path = os.path.join(dest_dir, saved_filename)
+        with open(saved_abs_path, "wb") as f_out:
+            f_out.write(image_bytes)
+        saved_rel_path = f"/uploads/{saved_filename}"
+    except Exception as save_err:
+        print(f"Warning: could not save symptom image to disk: {save_err}")
 
     result = {}
     if GEMINI_API_KEY:
@@ -192,6 +229,7 @@ async def analyze_symptom_image_for_triage(file: UploadFile = File(...)):
     normalized = _normalise_result(result)
     return {
         **normalized,
+        "image_path": saved_rel_path,
         "analysis_context": "triage",
         "assessment_flag": "red" if normalized.get("red_flags") else ("yellow" if "needs_clinician_review" in result else "green")
     }

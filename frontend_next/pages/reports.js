@@ -3,6 +3,53 @@ import Link from 'next/link';
 import Layout from '../components/Layout';
 import { getUser, fmtDate, getDjangoBase } from '../lib/api';
 
+// Safe parser for symptoms
+const parseSymptoms = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {
+      return raw.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [String(raw)];
+};
+
+// Safe parser for image analysis
+const parseImageAnalysis = (raw) => {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+// Urgency badge class mapper
+const getUrgencyClass = (urgency) => {
+  const u = String(urgency || 'medium').toLowerCase();
+  if (u === 'high' || u === 'urgent' || u === 'emergency') return 'badge-high';
+  if (u === 'low' || u === 'mild' || u === 'routine') return 'badge-low';
+  return 'badge-medium';
+};
+
+// Safe image path resolver (filters dead browser blobs and normalizes relative paths)
+const resolveImagePath = (path) => {
+  if (!path || typeof path !== 'string') return null;
+  const p = path.trim();
+  if (p.startsWith('blob:')) return null; // Dead client-side blob URL
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  if (p.startsWith('/')) return p;
+  return `/${p}`;
+};
+
 export default function Reports() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -39,12 +86,17 @@ export default function Reports() {
     }
   }, []);
 
+  // Compute parsed details for currently selected report
+  const selectedSymptoms = selectedReport ? parseSymptoms(selectedReport.symptoms_listed) : [];
+  const selectedAnalysis = selectedReport ? parseImageAnalysis(selectedReport.image_analysis) : null;
+  const validImageSrc = resolveImagePath(selectedReport?.image_path || selectedAnalysis?.image_path);
+
   return (
     <Layout activePage="reports">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1>My Triage Reports</h1>
-          <p>History of AI triage assessments and clinical guidance</p>
+          <p>History of AI triage assessments, clinical guidance, and specialist recommendations</p>
         </div>
         <Link href="/symptom-chat" className="btn-primary">
           + New Triage Session
@@ -68,7 +120,7 @@ export default function Reports() {
                 <th>Date</th>
                 <th>Possible Condition</th>
                 <th>Urgency</th>
-                <th>Specialist</th>
+                <th>Recommended Specialist</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -78,18 +130,22 @@ export default function Reports() {
                   <td>{fmtDate(r.created_at)}</td>
                   <td><strong>{r.possible_condition}</strong></td>
                   <td>
-                    <span className={`badge badge-${r.urgency || 'medium'}`}>
+                    <span className={`badge ${getUrgencyClass(r.urgency)}`}>
                       {r.urgency || 'medium'}
                     </span>
                   </td>
-                  <td>{r.recommended_specialist || 'General Practitioner'}</td>
+                  <td>
+                    <span className="badge badge-specialist" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      👨‍⚕️ {r.recommended_specialist || 'General Practitioner'}
+                    </span>
+                  </td>
                   <td>
                     <button
                       onClick={() => setSelectedReport(r)}
                       className="btn-ghost"
                       style={{ padding: '6px 14px', fontSize: '13px' }}
                     >
-                      View Details
+                      View Details →
                     </button>
                   </td>
                 </tr>
@@ -102,139 +158,241 @@ export default function Reports() {
       {/* Detail Modal */}
       {selectedReport && (
         <div className="modal-backdrop show" onClick={() => setSelectedReport(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px' }}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{selectedReport.possible_condition}</h3>
-              <button className="modal-close" onClick={() => setSelectedReport(null)}>✕</button>
+              <div>
+                <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--teal)', fontWeight: 600, marginBottom: '2px' }}>
+                  Clinical Triage Report
+                </div>
+                <h3>📋 {selectedReport.possible_condition}</h3>
+              </div>
+              <button
+                className="modal-close"
+                onClick={() => setSelectedReport(null)}
+                title="Close modal"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
             </div>
+
             <div className="modal-body">
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-                <span className={`badge badge-${selectedReport.urgency || 'medium'}`} style={{ textTransform: 'uppercase' }}>
+              {/* Top Meta Status Row */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  padding: '12px 14px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  marginBottom: '20px',
+                }}
+              >
+                <span className={`badge ${getUrgencyClass(selectedReport.urgency)}`} style={{ textTransform: 'uppercase', fontWeight: 600 }}>
                   Urgency: {selectedReport.urgency || 'medium'}
                 </span>
-                <span className="badge badge-low">
-                  Specialist: {selectedReport.recommended_specialist || 'General Medicine'}
+                <span className="badge badge-specialist" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  👨‍⚕️ {selectedReport.recommended_specialist || 'General Practitioner'}
                 </span>
-                <span style={{ fontSize: '13px', color: 'var(--ink-muted)', marginLeft: 'auto' }}>
-                  {fmtDate(selectedReport.created_at)}
+                {selectedReport.session_id && (
+                  <span style={{ fontSize: '12px', color: '#64748b', background: '#fff', border: '1px solid #cbd5e1', padding: '3px 8px', borderRadius: '6px' }}>
+                    ID: {selectedReport.session_id}
+                  </span>
+                )}
+                <span style={{ fontSize: '12px', color: 'var(--ink-muted)', marginLeft: 'auto', fontWeight: 500 }}>
+                  📅 {fmtDate(selectedReport.created_at)}
                 </span>
               </div>
 
-              {selectedReport.symptoms_listed?.length > 0 && (
+              {/* Reported Symptoms */}
+              {selectedSymptoms.length > 0 && (
                 <div className="report-section mb-16">
-                  <h4>Reported Symptoms</h4>
-                  <ul className="symptoms-list">
-                    {selectedReport.symptoms_listed.map((s, idx) => (
-                      <li key={idx}>{s}</li>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🩺</span> Reported Symptoms
+                  </h4>
+                  <div className="symptom-chips">
+                    {selectedSymptoms.map((s, idx) => (
+                      <span key={idx} className="symptom-chip">
+                        {s}
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
-              {selectedReport.reasoning && (
-                <div className="report-section mb-16">
-                  <h4>Clinical Reasoning</h4>
-                  <p>{selectedReport.reasoning}</p>
-                </div>
-              )}
-
-              {selectedReport.guidance && (
-                <div className="report-section mb-16">
-                  <h4>Guidance & Recommended Actions</h4>
-                  <p>{selectedReport.guidance}</p>
-                </div>
-              )}
-
-              {selectedReport.explanation && (
-                <div className="report-section mb-16">
-                  <h4>Diagnostic Explanation</h4>
-                  <p>{selectedReport.explanation}</p>
-                </div>
-              )}
-
-              {(selectedReport.image_analysis || selectedReport.image_path) && (
+              {/* Attached Clinical Photo & Vision Findings */}
+              {(selectedAnalysis || selectedReport.image_path) && (
                 <div
                   className="report-section mb-16"
                   style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    padding: '14px',
-                    borderRadius: '10px',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    padding: '16px',
+                    borderRadius: '12px',
                   }}
                 >
-                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', color: 'var(--ink)' }}>
-                    <span>📷</span> Attached Clinical Photo & Vision Findings
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', color: '#166534' }}>
+                    <span>📷</span> Gemini Vision Clinical Findings
                   </h4>
-                  <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                    {selectedReport.image_path && (
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    {validImageSrc ? (
                       <img
-                        src={selectedReport.image_path}
-                        alt="Symptom photo"
+                        src={validImageSrc}
+                        alt="Clinical symptom photo"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
                         style={{
-                          width: '84px',
-                          height: '84px',
+                          width: '96px',
+                          height: '96px',
                           borderRadius: '8px',
                           objectFit: 'cover',
-                          border: '1px solid #cbd5e1',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                          border: '1px solid #86efac',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                           cursor: 'pointer',
                         }}
-                        onClick={() => window.open(selectedReport.image_path, '_blank')}
-                        title="Click to view full photo"
+                        onClick={() => window.open(validImageSrc, '_blank')}
+                        title="Click to view full photo in new tab"
                       />
+                    ) : (
+                      <div
+                        style={{
+                          width: '88px',
+                          height: '88px',
+                          borderRadius: '8px',
+                          background: '#dcfce7',
+                          border: '1px solid #86efac',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#15803d',
+                          fontSize: '11px',
+                          textAlign: 'center',
+                          padding: '6px',
+                          flexShrink: 0,
+                        }}
+                        title="Visual inspection verified with Gemini Vision"
+                      >
+                        <span style={{ fontSize: '24px', marginBottom: '2px' }}>📷</span>
+                        <span style={{ fontWeight: 600 }}>Photo Logged</span>
+                      </div>
                     )}
                     <div style={{ fontSize: '13px', flex: 1, minWidth: '220px' }}>
-                      {typeof selectedReport.image_analysis === 'object' && selectedReport.image_analysis ? (
+                      {selectedAnalysis ? (
                         <>
                           <div style={{ marginBottom: '6px' }}>
-                            <strong>Type:</strong>{' '}
-                            <span style={{ textTransform: 'capitalize' }}>
-                              {selectedReport.image_analysis.image_type || 'Clinical lesion / finding'}
+                            <strong>Suspected Area/Type:</strong>{' '}
+                            <span style={{ textTransform: 'capitalize', color: '#15803d', fontWeight: 600 }}>
+                              {selectedAnalysis.image_type || 'Skin/Wound lesion'}
                             </span>
-                            {selectedReport.image_analysis.confidence && (
-                              <span style={{ color: 'var(--ink-muted)' }}> • Confidence: {selectedReport.image_analysis.confidence}</span>
+                            {selectedAnalysis.confidence && (
+                              <span style={{ color: '#64748b' }}> • Confidence: {selectedAnalysis.confidence}</span>
                             )}
                           </div>
-                          {selectedReport.image_analysis.visible_observations?.length > 0 && (
+                          {selectedAnalysis.visible_observations?.length > 0 && (
                             <div style={{ marginBottom: '6px' }}>
-                              <strong style={{ color: '#334155' }}>Visual Observations:</strong>
-                              <ul style={{ margin: '4px 0 0 16px', padding: 0, color: '#475569' }}>
-                                {selectedReport.image_analysis.visible_observations.map((obs, i) => (
+                              <strong style={{ color: '#1e293b' }}>Visual Observations:</strong>
+                              <ul style={{ margin: '4px 0 0 16px', padding: 0, color: '#334155' }}>
+                                {selectedAnalysis.visible_observations.map((obs, i) => (
                                   <li key={i}>{obs}</li>
                                 ))}
                               </ul>
                             </div>
                           )}
-                          {selectedReport.image_analysis.possible_relevance && (
-                            <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', marginTop: '6px' }}>
-                              {selectedReport.image_analysis.possible_relevance}
+                          {selectedAnalysis.possible_relevance && (
+                            <div style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic', marginTop: '6px' }}>
+                              Relevance: {selectedAnalysis.possible_relevance}
                             </div>
                           )}
-                          {selectedReport.image_analysis.red_flags?.length > 0 && (
+                          {selectedAnalysis.red_flags?.length > 0 && (
                             <div style={{ marginTop: '8px', color: '#dc2626', fontWeight: 600, fontSize: '12px' }}>
-                              🚨 Red Flags: {selectedReport.image_analysis.red_flags.join(', ')}
+                              🚨 Red Flags Noted: {selectedAnalysis.red_flags.join(', ')}
                             </div>
                           )}
                         </>
                       ) : (
-                        <p style={{ margin: 0 }}>{String(selectedReport.image_analysis || 'Image received and archived.')}</p>
+                        <p style={{ margin: 0, color: '#475569' }}>Clinical photo archived with this triage record.</p>
                       )}
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Clinical Reasoning */}
+              {selectedReport.reasoning && (
+                <div className="report-section mb-16">
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🧠</span> Clinical Assessment & Reasoning
+                  </h4>
+                  <p style={{ whiteSpace: 'pre-line', margin: 0, color: '#334155' }}>
+                    {selectedReport.reasoning}
+                  </p>
+                </div>
+              )}
+
+              {/* Guidance & Recommended Actions */}
+              {selectedReport.guidance && (
+                <div
+                  className="report-section mb-16"
+                  style={{
+                    background: 'rgba(224, 242, 238, 0.45)',
+                    border: '1px solid rgba(13, 107, 94, 0.2)',
+                    padding: '14px 16px',
+                    borderRadius: '10px',
+                  }}
+                >
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--teal)', marginBottom: '8px' }}>
+                    <span>💡</span> Guidance & Recommended Actions
+                  </h4>
+                  <p style={{ whiteSpace: 'pre-line', margin: 0, color: 'var(--ink)' }}>
+                    {selectedReport.guidance}
+                  </p>
+                </div>
+              )}
+
+              {/* Diagnostic Explanation */}
+              {selectedReport.explanation && (
+                <div className="report-section mb-16">
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>ℹ️</span> Diagnostic Explanation
+                  </h4>
+                  <p style={{ whiteSpace: 'pre-line', margin: 0, color: '#475569' }}>
+                    {selectedReport.explanation}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="modal-footer">
               <Link
-                href={`/doctors?condition=${encodeURIComponent(selectedReport.possible_condition)}&specialization=${encodeURIComponent(selectedReport.recommended_specialist || '')}`}
+                href={`/doctors?condition=${encodeURIComponent(selectedReport.possible_condition || '')}&specialization=${encodeURIComponent(selectedReport.recommended_specialist || '')}`}
                 className="btn-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 Find Recommended Doctors →
               </Link>
-              <button className="btn-ghost" onClick={() => setSelectedReport(null)}>
-                Close
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => window.print()}
+                  style={{ padding: '8px 14px', fontSize: '13px' }}
+                >
+                  🖨️ Print
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setSelectedReport(null)}
+                  style={{ padding: '8px 16px', fontSize: '13px' }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
