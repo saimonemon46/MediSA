@@ -19,7 +19,10 @@ async def generate_questions(req: SymptomRequest):
     try:
         result = run_question_generation(
             symptom=req.symptom,
-            user_id=req.user_id
+            user_id=req.user_id,
+            session_id=req.session_id,
+            chat_history=req.chat_history,
+            image_analysis=req.image_analysis
         )
         return result
     except Exception as e:
@@ -37,7 +40,8 @@ async def process_message(req: ConversationalRequest):
             message=req.message,
             user_id=req.user_id,
             chat_history=req.chat_history,
-            patient_state=req.patient_state  # NEW: pass patient state
+            patient_state=req.patient_state,
+            image_analysis=req.image_analysis
         )
         return result
     except Exception as e:

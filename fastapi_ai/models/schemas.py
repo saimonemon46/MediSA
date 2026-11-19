@@ -7,6 +7,9 @@ from datetime import datetime
 class SymptomRequest(BaseModel):
     symptom: str = Field(..., description="Primary symptom description from user")
     user_id: int = Field(..., description="User ID from PHP backend")
+    session_id: Optional[str] = None
+    chat_history: List[Dict[str, str]] = []
+    image_analysis: Optional[Dict[str, Any]] = None
 
 
 class ConversationalRequest(BaseModel):
@@ -15,6 +18,7 @@ class ConversationalRequest(BaseModel):
     user_id: int
     chat_history: List[Dict[str, str]] = []
     patient_state: Optional[Dict[str, Any]] = None  # NEW: patient state
+    image_analysis: Optional[Dict[str, Any]] = None
 
 
 class ReportRequest(BaseModel):
