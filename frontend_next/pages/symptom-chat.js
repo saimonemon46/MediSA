@@ -69,6 +69,9 @@ export default function SymptomChat() {
       if (res.ok) {
         const data = await res.json();
         setImageAnalysis(data);
+        if (data.image_path) {
+          setSavedImagePreview(data.image_path);
+        }
       }
     } catch {
       console.log('Image uploaded locally for triage review.');
@@ -78,15 +81,51 @@ export default function SymptomChat() {
   };
 
   const handleSend = async (customText = null) => {
+    if (analyzingImage || isTyping) return;
+
     const query = (typeof customText === 'string' ? customText : input).trim();
     if (!query && !selectedImage && !imagePreview) return;
 
     const currentImage = imagePreview;
     const currentAnalysis = imageAnalysis;
-    const chiefComplaint = query || (currentAnalysis?.image_type && currentAnalysis.image_type !== 'other' && currentAnalysis.image_type !== 'unclear' ? `${currentAnalysis.image_type} condition` : 'Visual symptom presentation');
+    const serverImgPath = currentAnalysis?.image_path || savedImageAnalysis?.image_path || currentImage;
+
+    // Option A: If user uploaded an image WITHOUT typing text, check clinical relevance
+    if (!query && currentImage) {
+      const imgType = currentAnalysis?.image_type?.toLowerCase() || '';
+      const isNonClinical = !currentAnalysis || imgType === 'other' || imgType === 'unclear';
+
+      if (isNonClinical) {
+        // Acknowledge non-clinical photo with a polite clarification, stay in initial stage
+        const userMsg = {
+          sender: 'user',
+          text: 'Attached photo for clinical inspection',
+          image: currentImage,
+        };
+        const aiClarification = {
+          sender: 'ai',
+          text: "I've reviewed your attached photo, but it does not appear to show an identifiable skin lesion, rash, or localized wound. Could you please describe what symptoms you are experiencing, or upload a clear, focused photo of the affected area?",
+          visionAnalysis: currentAnalysis || null,
+        };
+        setMessages((prev) => [...prev, userMsg, aiClarification]);
+        setInput('');
+        setSelectedImage(null);
+        setImagePreview('');
+        setImageAnalysis(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+    }
+
+    // Determine chief complaint cleanly - never fallback to ambiguous 'Visual symptom presentation'
+    const chiefComplaint = query || (
+      currentAnalysis?.image_type && currentAnalysis.image_type !== 'other' && currentAnalysis.image_type !== 'unclear'
+        ? `Observed ${currentAnalysis.image_type} on uploaded medical photo`
+        : 'Symptom Consultation'
+    );
 
     if (currentAnalysis) setSavedImageAnalysis(currentAnalysis);
-    if (currentImage) setSavedImagePreview(currentImage);
+    if (serverImgPath) setSavedImagePreview(serverImgPath);
 
     const userMsg = {
       sender: 'user',
@@ -114,6 +153,15 @@ export default function SymptomChat() {
     setIsTyping(true);
 
     const u = getUser();
+    const currentSessId = sessionId || 'SESS-' + Date.now().toString(36).toUpperCase();
+    if (!sessionId) setSessionId(currentSessId);
+
+    // Format chat history for API
+    const currentHistory = updatedMessages.map((m) => ({
+      role: m.sender === 'ai' ? 'assistant' : 'user',
+      content: m.text,
+    }));
+    const activeAnalysis = currentAnalysis || savedImageAnalysis;
 
     // Turn 1: INITIAL STAGE -> Call /generate-questions
     if (stage === 'initial') {
@@ -124,8 +172,11 @@ export default function SymptomChat() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            session_id: currentSessId,
             symptom: chiefComplaint,
             user_id: u?.id || 1,
+            chat_history: currentHistory,
+            image_analysis: activeAnalysis,
           }),
         });
 
@@ -133,16 +184,17 @@ export default function SymptomChat() {
         const data = await res.json();
         setIsTyping(false);
 
-        const currentSessId = data.session_id || 'SESS-' + Date.now().toString(36).toUpperCase();
-        setSessionId(currentSessId);
-        setPatientState(data.patient_state || null);
-
-        const aiMessage = data.message || "Could you provide a few more details on how long you've had these symptoms?";
-        setMessages((prev) => [...prev, { sender: 'ai', text: aiMessage }]);
-        setStage('followup');
+        if (data.session_id) setSessionId(data.session_id);
+        if (data.patient_state) setPatientState(data.patient_state);
 
         if (data.is_complete) {
-          await triggerReportGeneration(currentSessId, chiefComplaint, [chiefComplaint], data.chat_history, data.patient_state, currentAnalysis);
+          const aiClosing = data.message || "Thank you for providing those details. Generating your triage summary...";
+          setMessages((prev) => [...prev, { sender: 'ai', text: aiClosing }]);
+          await triggerReportGeneration(currentSessId, chiefComplaint, [chiefComplaint], data.chat_history || currentHistory, data.patient_state, activeAnalysis);
+        } else {
+          const aiMessage = data.message || "Could you provide a few more details on how long you've had these symptoms?";
+          setMessages((prev) => [...prev, { sender: 'ai', text: aiMessage }]);
+          setStage('followup');
         }
       } catch (err) {
         setIsTyping(false);
@@ -160,13 +212,6 @@ export default function SymptomChat() {
 
     // Turn 2+: FOLLOWUP STAGE -> Call /process-message
     try {
-      const currentSessId = sessionId || 'SESS-' + Date.now().toString(36).toUpperCase();
-      const currentHistory = updatedMessages.map((m) => ({
-        role: m.sender === 'ai' ? 'assistant' : 'user',
-        content: m.text,
-      }));
-      const activeAnalysis = currentAnalysis || imageAnalysis || savedImageAnalysis;
-
       const res = await fetch(`${getAiBase()}/process-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,14 +233,16 @@ export default function SymptomChat() {
         setPatientState(data.patient_state);
       }
 
-      const aiText = data.message || data.reply || (data.chat_history && data.chat_history.length && data.chat_history[data.chat_history.length - 1].content);
-      if (aiText) {
-        setMessages((prev) => [...prev, { sender: 'ai', text: aiText }]);
-      }
-
       if (data.is_complete) {
+        const aiClosing = data.message || "Thank you. I have sufficient clinical details to prepare your triage assessment.";
+        setMessages((prev) => [...prev, { sender: 'ai', text: aiClosing }]);
         const answers = updatedMessages.filter((m) => m.sender === 'user').map((m) => m.text);
         await triggerReportGeneration(currentSessId, primarySymptom || query, answers, data.chat_history || currentHistory, data.patient_state, activeAnalysis);
+      } else {
+        const aiText = data.message || data.reply || (data.chat_history && data.chat_history.length && data.chat_history[data.chat_history.length - 1].content);
+        if (aiText) {
+          setMessages((prev) => [...prev, { sender: 'ai', text: aiText }]);
+        }
       }
     } catch (err) {
       setIsTyping(false);
@@ -255,7 +302,7 @@ export default function SymptomChat() {
             explanation: finalReport.explanation || '',
             symptoms_listed: finalReport.symptoms_listed || [chiefComplaint],
             image_analysis: activeImageAnalysis,
-            image_path: savedImagePreview || null,
+            image_path: activeImageAnalysis?.image_path || (savedImagePreview && !savedImagePreview.startsWith('blob:') ? savedImagePreview : null),
           }),
         });
       } catch (saveErr) {
@@ -460,6 +507,54 @@ export default function SymptomChat() {
             </div>
           ))}
 
+          {/* In-chat Assessment Summary Card when complete */}
+          {stage === 'done' && report && (
+            <div
+              style={{
+                margin: '12px 0',
+                padding: '16px 20px',
+                background: '#f0fdfa',
+                border: '1px solid #99f6e4',
+                borderRadius: '12px',
+                maxWidth: '680px',
+                boxShadow: '0 2px 8px rgba(15, 118, 110, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontWeight: 600, color: '#0f766e', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📋</span> Assessment Summary Ready
+                </span>
+                <span
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    background: report.urgency === 'high' ? '#fee2e2' : report.urgency === 'medium' ? '#fef3c7' : '#dcfce7',
+                    color: report.urgency === 'high' ? '#dc2626' : report.urgency === 'medium' ? '#d97706' : '#16a34a',
+                  }}
+                >
+                  {report.urgency || 'Routine'} Urgency
+                </span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#1e293b', marginBottom: '6px' }}>
+                <strong>Suspected Condition:</strong> {report.possible_condition || 'Clinical Review Recommended'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#475569', marginBottom: '12px' }}>
+                <strong>Recommended Specialist:</strong> {report.recommended_specialist || 'General Medicine'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReportPanel(true)}
+                className="btn-primary"
+                style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>📄</span> Open Full Triage Report
+              </button>
+            </div>
+          )}
+
           {isTyping && (
             <div className="msg-typing">
               <div className="typing-dots">
@@ -550,6 +645,10 @@ export default function SymptomChat() {
                   <span style={{ color: 'var(--teal)', fontWeight: 500 }}>
                     🔍 Analyzing with Gemini Vision...
                   </span>
+                ) : imageAnalysis?.image_type === 'other' || imageAnalysis?.image_type === 'unclear' ? (
+                  <span style={{ color: '#d97706', fontWeight: 500 }}>
+                    ⚠️ Non-clinical image detected — please describe your symptoms
+                  </span>
                 ) : imageAnalysis ? (
                   <span style={{ color: '#16a34a', fontWeight: 500 }}>
                     ✓ Gemini Vision Ready ({imageAnalysis.image_type || 'reviewed'})
@@ -583,55 +682,156 @@ export default function SymptomChat() {
           </div>
         )}
 
-        {/* Input Bar */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          style={{ padding: '16px 24px', background: '#fff', borderTop: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="btn-ghost"
-            title="Attach skin or wound image"
+        {/* Input Bar or Completion Banner */}
+        {stage === 'done' ? (
+          <div
             style={{
-              padding: '10px 14px',
-              fontSize: '14px',
+              padding: '16px 24px',
+              background: '#f8fafc',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              border: imagePreview ? '1px solid var(--teal)' : '1px solid var(--border)',
-              background: imagePreview ? 'var(--teal-light)' : '#fff',
-              color: imagePreview ? 'var(--teal)' : 'inherit',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap',
             }}
           >
-            📷 <span style={{ fontWeight: 500 }}>{imagePreview ? 'Photo Ready' : 'Photo'}</span>
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: '#dcfce7',
+                  color: '#16a34a',
+                  fontWeight: 'bold',
+                  fontSize: '15px',
+                }}
+              >
+                ✓
+              </span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--ink)' }}>
+                  Triage Consultation Complete
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+                  {report?.possible_condition ? `Summary ready: ${report.possible_condition}` : 'Clinical summary generated'}
+                </div>
+              </div>
+            </div>
 
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={stage === 'initial' ? "Describe your symptoms (e.g., severe headache and fever for 2 days)..." : "Answer the question or add more details..."}
-            style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '15px' }}
-          />
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setShowReportPanel(true)}
+                className="btn-primary"
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>📄</span> View Full Triage Report
+              </button>
 
-          <button type="submit" className="btn-primary" style={{ padding: '12px 24px' }}>
-            Send
-          </button>
-        </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setStage('initial');
+                  setMessages([
+                    {
+                      sender: 'ai',
+                      text: "Hello! I'm MediSA, your medical triage companion. Please describe your symptoms in as much detail as you can — what you're feeling, when it started, and how severe it feels. You can also attach an image if you have a visible skin condition or wound.",
+                    },
+                  ]);
+                  setReport(null);
+                  setShowReportPanel(false);
+                  setPatientState(null);
+                  setSavedImageAnalysis(null);
+                  setSavedImagePreview('');
+                  setSessionId('SESS-' + Date.now().toString(36).toUpperCase());
+                }}
+                className="btn-ghost"
+                style={{
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>🔄</span> Start New Consultation
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+            style={{ padding: '16px 24px', background: '#fff', borderTop: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              accept="image/*"
+              style={{ display: 'none' }}
+              disabled={analyzingImage || isTyping}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-ghost"
+              title="Attach skin or wound image"
+              disabled={analyzingImage || isTyping}
+              style={{
+                padding: '10px 14px',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                border: imagePreview ? '1px solid var(--teal)' : '1px solid var(--border)',
+                background: imagePreview ? 'var(--teal-light)' : '#fff',
+                color: imagePreview ? 'var(--teal)' : 'inherit',
+                borderRadius: '8px',
+                cursor: (analyzingImage || isTyping) ? 'not-allowed' : 'pointer',
+                opacity: (analyzingImage || isTyping) ? 0.6 : 1,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              📷 <span style={{ fontWeight: 500 }}>{imagePreview ? 'Photo Ready' : 'Photo'}</span>
+            </button>
+
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isTyping}
+              placeholder={stage === 'initial' ? "Describe your symptoms (e.g., severe headache and fever for 2 days)..." : "Answer the question or add more details..."}
+              style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '15px' }}
+            />
+
+            <button
+              type="submit"
+              className="btn-primary"
+              style={{
+                padding: '12px 24px',
+                opacity: (analyzingImage || isTyping || (!input.trim() && !imagePreview)) ? 0.6 : 1,
+                cursor: (analyzingImage || isTyping || (!input.trim() && !imagePreview)) ? 'not-allowed' : 'pointer',
+              }}
+              disabled={analyzingImage || isTyping || (!input.trim() && !imagePreview)}
+            >
+              {analyzingImage ? 'Analyzing...' : isTyping ? 'Thinking...' : 'Send'}
+            </button>
+          </form>
+        )}
 
         {/* Slide-out Report Drawer */}
         {showReportPanel && report && (
